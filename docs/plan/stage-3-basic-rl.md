@@ -11,7 +11,7 @@ Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 - **State/observation:** lagged market features plus position/portfolio variables needed for the next decision.
 - **Action:** a few discrete target exposures. Include short/flat/long only if shorting is actually modeled.
 - **Transition:** advance one historical step and update accounting.
-- **Reward:** begin with next-period net portfolio return; add risk penalties as separate experiments.
+- **Reward:** use the confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\). Define the risk measure/window and penalty units before training; transaction costs must enter exactly once. Run a return-only reference as an ablation so the effect of \(\lambda\sigma_t\) can be interpreted.
 - **Discount:** record \(\gamma\) and explain its role for finite episodes.
 - **Episode:** contiguous training segment; distinguish natural data end from an artificial time limit.
 
@@ -30,10 +30,9 @@ Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 
 After return-only Q-learning works:
 
-- [ ] Add one risk term at a time, such as volatility or drawdown penalty.
-- [ ] Define each term's timing, units, and scale; avoid combining incompatible raw quantities blindly.
+- [ ] Choose and document what \(\sigma_t\) means (for example, rolling volatility or a drawdown-based measure), its lookback/timing, and its scale.
+- [ ] Add the confirmed risk penalty using a small predeclared range for \(\lambda\), including \(\lambda=0\) as a return-only reference.
 - [ ] Ensure transaction cost enters the accounting/reward path exactly once.
-- [ ] Try a small predeclared range of risk-aversion coefficients.
 - [ ] Compare Sharpe, maximum drawdown, CAGR, profit factor, Calmar, turnover, and costs.
 - [ ] Look for reward hacking, inactivity, or excessive position churn.
 
