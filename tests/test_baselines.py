@@ -29,3 +29,12 @@ def test_fixed_exposure_rebalances():
             if event['kind'] == 'execution':
                 assert event['exposure'] == pytest.approx(value)
         assert result.orders[1]['delta_units'] != 0
+
+
+def test_sma_and_random():
+    from indexpilot_us100.portfolio.baselines import SMAPolicy, RandomPolicy, baseline_policies
+    sma = run_episode(market(), SMAPolicy())
+    assert sma.orders[0]['date'] == market().dates[23]
+    random = RandomPolicy()
+    assert run_episode(market(), random).orders == run_episode(market(), random).orders
+    assert len(baseline_policies()) == 6
