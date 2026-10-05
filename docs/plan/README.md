@@ -1,6 +1,6 @@
 # Project plan
 
-This is a first RL learning project: simulate a stock-positioning task, build a sound baseline, then add RL in small steps. Work through the four stages in order. The initial core experiment uses **one stock**; 100 stocks and PPO are optional extensions, not prerequisites.
+This is a first RL learning project: simulate a stock-positioning task, build a sound baseline, then add RL in small steps. Work through the four stages in order. The initial core experiment uses **one stock**; the eventual **US100** universe and PPO are optional extensions, not prerequisites. In these documents, US100 means the 100 largest U.S.-listed companies by market capitalization at each universe formation date; it does not mean S&P 100 or Nasdaq-100.
 
 ## Stages
 
