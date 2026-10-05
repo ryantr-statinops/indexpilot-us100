@@ -7,7 +7,7 @@ A learning-focused reinforcement learning project for stock-positioning simulati
 - Project plan: [`docs/plan/README.md`](docs/plan/README.md)
 - Stage 1 assumptions and data workflow: [`docs/stage-1-assumptions.md`](docs/stage-1-assumptions.md)
 - Stage 1 downloaded-data profile: [`docs/stage-1-data-profile.md`](docs/stage-1-data-profile.md)
-- Stage 1 is complete: AAPL data pipeline, action/reward definitions, causal observation timing, and episode/accounting conventions are documented. Stage 2 is next; no trading policy or RL agent is implemented yet.
+- Stage 1 is complete: AAPL data pipeline, action/reward definitions, causal observation timing, and episode/accounting conventions are documented. Stage 2 is complete: holdings/cash simulator, six baseline policies, five metrics, audited exports and FinPlot viewer. 103 automated tests pass. Stage 3 Q-learning is next; no RL agent is implemented yet.
 
 ## Setup
 

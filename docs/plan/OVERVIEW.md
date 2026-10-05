@@ -7,7 +7,7 @@ Learn reinforcement learning through a small, transparent stock-trading simulati
 ## First version
 
 - Start with one U.S. stock and historical data.
-- The intended action is a target position in \([-1,1]\), provisionally meaning maximum short, flat, and maximum long. Stage 1 must pin down the exact meaning and constraints.
+- The intended action is a target position in \([-1,1]\), meaning signed target notional as a fraction of post-fee equity. Stage 2 supports synthetic short, flat and long holdings.
 - Begin with a few discrete target positions so tabular Q-learning is possible.
 - Compare against simple non-RL strategies through the same simulator.
 - The eventual **US100 universe** means the 100 largest U.S.-listed companies by market capitalization at each universe formation date. It is a project-defined universe, not the S&P 100 or Nasdaq-100 index. Expand to it only after the one-stock core experiment is sound.
@@ -26,14 +26,14 @@ Learn reinforcement learning through a small, transparent stock-trading simulati
 - **Observation:** lagged market features and current position/portfolio information available at decision time.
 - **Action:** initially a small discrete set; later the continuous interval \([-1,1]\).
 - **Transition:** market advances and portfolio accounting updates.
-- **Reward:** confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\); the risk measure/window and scaling are defined in Stage 3.
+- **Reward:** confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\); Stage 2 implements the lagged sample-volatility proxy, gross return and cost fractions.
 - **Episode:** a contiguous historical segment with explicit start/end behavior.
 
-These details remain provisional until the relevant stage resolves them.
+Accounting, timing and baseline metrics are implemented. State discretization and Q-learning remain Stage 3 work.
 
 ## Metrics
 
-The requested scorecard is Sharpe ratio, maximum drawdown, CAGR, profit factor, and Calmar ratio. Stage 2 defines annualization, risk-free rate, closed-trade accounting, signs, and undefined cases before policies are compared.
+The requested scorecard is Sharpe ratio, maximum drawdown, CAGR, profit factor, and Calmar ratio. Stage 2 has defined and tested annualization, risk-free rate, closed-trade accounting, signs and undefined cases. See the Stage 2 walkthrough.
 
 ## Selected initial stack
 
@@ -82,13 +82,9 @@ Tabular Q-learning for Stage 3 needs only Python and NumPy; it does not need PyT
 
 ## Open decisions
 
-- What is the exact existing decision formula?
-- Does the action represent a fraction of capital, a share quantity, or leveraged exposure?
-- Is shorting included in the first simulation? What financing, margin, and liquidation rules apply?
-- What are the observation/execution timestamps, trading frequency, and price field?
-- Which date range and data provider will be used?
-- Which point-in-time source and rebalance schedule will define historical US100 membership and market capitalization? A current list applied throughout history creates survivorship bias.
-- What conventions define the five metrics?
+- Tabular state bins, Q-learning hyperparameters and training protocol (Stage 3).
+- Chronological train/validation/test boundaries and validation-only parameter selection (Stage 4).
+- Point-in-time US100 membership source and reconstitution schedule for the optional universe extension.
 
 Resolve only what the current stage needs. A successful learning project does not need RL to outperform the market; it needs a correct, fair, and interpretable experiment.
 
