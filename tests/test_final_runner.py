@@ -21,3 +21,17 @@ def test_immutable_greedy_eval(tmp_path,monkeypatch):
     assert not result.agent.visits.flags.writeable
     assert result.result.equity[0]['cash']==100000
     assert result.result.equity[0]['date'].isoformat()=='2020-05-01'
+
+
+def test_baselines_are_not_duplicated():
+    from indexpilot_us100.evaluation.final.runner import baseline_scenarios,evaluate_baseline
+    from indexpilot_us100.evaluation.final.config import EvaluationConfig
+    from dataclasses import asdict
+    from test_simulator import market
+    protocol={'evaluation_config':asdict(EvaluationConfig()),'simulation_config':asdict(SimulationConfig())}
+    scenarios=baseline_scenarios(protocol,10)
+    assert len(scenarios)==10
+    assert sum(row['kind']=='deterministic' for row in scenarios)==5
+    assert sum(row['kind']=='random' for row in scenarios)==5
+    results=[evaluate_baseline(protocol,market(),row).result for row in scenarios]
+    assert all(result.equity[0]['date']==results[0].equity[0]['date'] for result in results)

@@ -33,3 +33,22 @@ def evaluate_frozen_policy(root,protocol,segment,scenario):
     trajectory=TradingEnvironment(segment,simulation_config(protocol,scenario)).rollout(agent)
     if agent.q.flags.writeable or agent.visits.flags.writeable: raise ValueError('Evaluation unlocked learning arrays')
     return EvaluatedRun(scenario,trajectory.result,trajectory,agent)
+
+
+def baseline_scenarios(protocol,cost_bps):
+    from indexpilot_us100.portfolio.baselines import baseline_policies
+    config=protocol['evaluation_config']
+    rows=[]
+    for policy in baseline_policies():
+        seeds=config['seeds'] if policy.name=='random_discrete' else [config['primary_seed']]
+        for seed in seeds:
+            rows.append(dict(kind='random' if policy.name=='random_discrete' else 'deterministic',policy=policy.name,seed=seed,risk_lambda=config['primary_lambda'],cost_bps=cost_bps))
+    return rows
+
+
+def evaluate_baseline(protocol,segment,scenario):
+    from indexpilot_us100.portfolio.baselines import baseline_policies
+    from indexpilot_us100.portfolio.simulator import run_episode
+    matches=[policy for policy in baseline_policies() if policy.name==scenario['policy']]
+    if len(matches)!=1: raise ValueError('Unknown baseline')
+    return EvaluatedRun(scenario,run_episode(segment,matches[0],simulation_config(protocol,scenario)))
