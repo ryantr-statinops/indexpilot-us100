@@ -8,6 +8,7 @@ from indexpilot_us100.metrics import compute_metrics
 from ..export import export_results,file_hash,write_json
 from ..learning_export import trajectory_records
 from .protocol import frozen_path
+from .diagnostics import policy_diagnostics
 
 TRANSITION_SCHEMA={'state':pl.Int64,'action':pl.Int64,'reward':pl.Float64,'next_state':pl.Int64,'terminated':pl.Boolean,'date':pl.Date,'end_date':pl.Date}
 
@@ -41,7 +42,10 @@ def store_run(root,protocol,run):
         export_results([run.result],protocol['input_file'],directory/'accounting')
         if run.trajectory is not None:
             pl.DataFrame(trajectory_records(run.trajectory),schema=TRANSITION_SCHEMA).write_parquet(directory/'transitions.parquet')
-        row=score_row(run,protocol)
+        pl.DataFrame(run.decisions,schema={'date':pl.Date,'state':pl.Int64,'target':pl.Float64,'exposure_before':pl.Float64,'holdings_before':pl.Float64,'equity_before':pl.Float64}).write_parquet(directory/'decisions.parquet')
+        diagnostics=policy_diagnostics(run)
+        write_json(directory/'diagnostics.json',diagnostics)
+        row={**score_row(run,protocol),**{key:diagnostics[key] for key in ('flat_decision_fraction','active_intervals','mean_gross_exposure','max_gross_exposure','unseen_state_fraction')}}
         write_json(directory/'score.json',row)
         write_json(directory/'scenario.json',dict(protocol_id=protocol['protocol_id'],scenario=run.scenario,input_sha256=protocol['input_sha256']))
         write_json(directory/'completion.json',dict(protocol_id=protocol['protocol_id'],hashes=artifact_hashes(directory)))
