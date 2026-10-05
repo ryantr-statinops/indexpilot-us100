@@ -1,0 +1,21 @@
+[simulation]
+initial_equity = 100000
+cost_bps = 10
+risk_lambda = 0
+risk_window = 20
+annualization = 252
+risk_free_annual = 0
+seed = 42
+
+[learning]
+episodes = 100
+alpha = 0.1
+gamma = 0.99
+epsilon_start = 1.0
+epsilon_decay = 0.97
+epsilon_min = 0.05
+lambdas = [0.0, 0.5, 1.0, 2.0]
+train_end = "2020-12-31"
+validation_start = "2021-01-01"
+validation_end = "2022-12-31"
+test_start = "2023-01-01"
