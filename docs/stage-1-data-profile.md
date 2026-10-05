@@ -12,24 +12,28 @@ This is a descriptive snapshot of the locally downloaded AAPL data used to build
 | Returned dates | 2015-01-02 through 2026-10-02 |
 | Observations | 2,955 daily bars |
 | Duplicate session dates | 0 |
-| Null/non-positive OHLC and adjusted-close rows | 0 |
-| Returns | 2,954 simple and log returns from adjusted close; first observation has no prior return |
+| Null/non-positive OHLC, adjusted-close, or synthetic adjusted-open rows | 0 |
+| Returns | 2,954 simple/log adjusted-close returns and 2,954 synthetic adjusted-open-to-adjusted-open returns; each has one initial null |
 
-The provider has no bar for the exclusive end date, and 2026-10-05 was not present in the returned snapshot. Data availability can change independently of this project.
+The snapshot was fetched on 2026-10-05 at 05:01 UTC, before the U.S. cash session opened that day; the most recent available session was Friday 2026-10-02. Data availability can change independently of this project.
 
-## Simple adjusted-close returns (per observation)
+The processed table also includes `adj_open = Open × Adj Close / Close` and `open_to_open_return`. This synthetic adjusted open carries the adjusted-close total-return factor onto the open price so the proposed policy timing has an open-to-open return series. It is not a literal historical fill price.
+
+## Synthetic adjusted-open-to-adjusted-open returns (per observation)
 
 | Statistic | Value |
 |---|---:|
-| Mean | 0.00105232 |
-| Standard deviation (sample) | 0.01808276 |
-| 1st percentile | -0.04831390 |
-| Median | 0.00100074 |
-| 99th percentile | 0.04849471 |
+| Mean | 0.00105685 |
+| Standard deviation (sample) | 0.01868915 |
+| 1st percentile | -0.05248516 |
+| Median | 0.00136454 |
+| 99th percentile | 0.05008418 |
 
-An Augmented Dickey-Fuller diagnostic on this return series produced statistic -17.657071 and p-value 3.69704e-30 with 8 lags and 2,945 observations. This is a narrow diagnostic for this downloaded sample under the test's assumptions; it does not show that returns are predictable or that a strategy can earn excess returns.
+An Augmented Dickey-Fuller diagnostic on this return series produced statistic -33.822680 with 2 lags and 2,951 observations. Its p-value underflowed to 0.0 in floating-point output; that does not mean the true p-value is exactly zero. This is a narrow diagnostic for this downloaded sample under the test's assumptions; it does not show that returns are predictable or that a strategy can earn excess returns.
 
 The data provider can revise adjusted historical prices; these results reflect the snapshot fetched on 2026-10-05 UTC and may change on a later download.
+
+Hand check: adjusted opens were 24.6271994096 on 2015-01-02 and 23.9418205485 on 2015-01-05, giving \(23.9418205485/24.6271994096-1=-0.02783016\) (about -2.7830%).
 
 ## Recreate
 
