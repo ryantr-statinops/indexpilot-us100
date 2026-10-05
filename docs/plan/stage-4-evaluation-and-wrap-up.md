@@ -44,8 +44,8 @@ Compare the learned policy fairly on unseen future data, explain what happened, 
 
 ## Possible extensions (only after the core project)
 
-- Expand from one stock to a small group, then to 100 names.
-- Define a point-in-time top-100 universe; a current list applied historically has survivorship bias.
+- Expand from one stock to a small group, then to the project-defined US100 universe: the 100 largest U.S.-listed companies by market capitalization at each formation date.
+- Define point-in-time membership and a reconstitution schedule. A current list applied historically has survivorship bias. This universe is distinct from the S&P 100 and Nasdaq-100 indices.
 - Decide whether a multi-stock action is one selected asset or a vector of portfolio weights.
 - Try continuous actions in \([-1,1]\) and PPO with PyTorch/Stable-Baselines3.
 - Add richer execution costs, regime features, or walk-forward evaluation.
