@@ -27,4 +27,16 @@ class BuyHoldPolicy:
 
 
 def baseline_policies():
-    return [CashPolicy(), BuyHoldPolicy()]
+    return [CashPolicy(), BuyHoldPolicy(), FixedExposurePolicy(.5, 'fixed_long_50'), FixedExposurePolicy(-.5, 'fixed_short_50')]
+
+
+class FixedExposurePolicy:
+    def __init__(self, value: float, name: str):
+        self.action = TargetExposure(value)
+        self.name = name
+
+    def reset(self, seed: int):
+        pass
+
+    def decide(self, observation: Observation):
+        return self.action
