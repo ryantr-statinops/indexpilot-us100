@@ -54,3 +54,13 @@ def test_validation_prices_do_not_fit_q_table():
         np.testing.assert_array_equal(a.agent.q,b.agent.q)
         np.testing.assert_array_equal(a.agent.visits,b.agent.visits)
         assert a.training_log==b.training_log
+
+
+def test_undefined_validation_does_not_invent_a_winner():
+    from indexpilot_us100.portfolio.market import MarketData
+    data=synthetic_market()
+    flat=MarketData(data.dates,np.full(len(data.dates),100.),np.full(len(data.dates),100.),data.warnings)
+    experiments,selection=run_experiments(flat,SimulationConfig(),config())
+    assert selection['selected_lambda']==0
+    assert selection['status']=='undefined_fallback_lambda_zero'
+    np.testing.assert_array_equal(experiments[0].agent.q,experiments[1].agent.q)
