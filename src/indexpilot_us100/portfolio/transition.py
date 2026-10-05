@@ -22,3 +22,21 @@ def advance_interval(account: Account, price: float, next_price: float, action: 
     after, execution = rebalance(account, price, action, cost_rate)
     pnl = after.holdings * (next_price - price)
     return Interval(execution, after, start, after.equity(next_price), pnl)
+
+
+@dataclass(frozen=True)
+class Reward:
+    gross_return: float
+    cost_fraction: float
+    risk: float
+    value: float
+
+
+def interval_reward(interval: Interval, volatility: float, risk_lambda: float = 0., closing_fee: float = 0.) -> Reward:
+    import math
+    if not all(math.isfinite(value) and value >= 0 for value in (volatility, risk_lambda, closing_fee)):
+        raise ValueError('Volatility, lambda and closing fee must be finite and nonnegative')
+    gross = interval.gross_pnl / interval.start_equity
+    cost = (interval.execution.fee + closing_fee) / interval.start_equity
+    risk = abs(interval.account.holdings * interval.execution.price / interval.start_equity) * volatility
+    return Reward(gross, cost, risk, gross - risk_lambda * risk - cost)
