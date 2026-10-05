@@ -14,10 +14,11 @@ def main(argv=None):
     prepare=commands.add_parser('prepare')
     for field in ('data','source-run','config','output-dir'): prepare.add_argument('--'+field,required=True)
     prepare.add_argument('--reason')
-    for command in ('run','verify'):
+    for command in ('run','verify','report'):
         child=commands.add_parser(command)
         child.add_argument('--protocol-dir',required=True)
         child.add_argument('--data',help='Relocated exact snapshot; SHA256 must match')
+        if command=='report': child.add_argument('--output')
     args=parser.parse_args(argv)
     try:
         if args.command=='prepare':
@@ -31,6 +32,9 @@ def main(argv=None):
             manifest=run_evaluation(args.protocol_dir,args.data,lambda scenario:print(scenario,flush=True))
             print('Completed:',len(manifest['scenarios']),'scenarios')
             print(pl.read_csv(Path(args.protocol_dir)/'primary_summary.csv').select('policy','risk_lambda','net_return','sharpe','max_drawdown','trade_count','active_intervals'))
+        elif args.command=='report':
+            from .report import generate_report
+            print('Report:',generate_report(args.protocol_dir,args.output))
         else:
             replay=verify_evaluation(args.protocol_dir,args.data,lambda scenario:print('verify',scenario,flush=True))
             print('Verified replay:',replay)
