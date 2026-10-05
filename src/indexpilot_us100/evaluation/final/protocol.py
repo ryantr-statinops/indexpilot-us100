@@ -71,13 +71,14 @@ def prepare_protocol(input_path,source_run,config,output_dir,progress=None):
     return protocol
 
 
-def validate_protocol(root):
+def validate_protocol(root,input_path=None):
     root=Path(root)
     protocol=json.loads((root/'protocol.json').read_text())
     identifier=protocol.get('protocol_id'); payload={key:value for key,value in protocol.items() if key!='protocol_id'}
     if protocol.get('artifact_type')!='indexpilot-stage-4-protocol' or identifier!=digest(payload):
         raise ValueError('Protocol hash/schema integrity failed')
-    if file_hash(Path(protocol['input_file']))!=protocol['input_sha256']:
+    candidate=Path(input_path).resolve() if input_path is not None else Path(protocol['input_file'])
+    if file_hash(candidate)!=protocol['input_sha256']:
         raise ValueError('Frozen input data hash changed')
     if protocol['code_fingerprints']!=code_fingerprints() or protocol['lock_sha256']!=lock_hash():
         raise ValueError('Frozen calculation code or dependency lock changed')
@@ -90,4 +91,4 @@ def validate_protocol(root):
         for filename,key in [('model','sha256'),('training_log','training_log_sha256')]:
             if file_hash(frozen_path(root,model[filename]))!=model[key]:
                 raise ValueError('Frozen model/training log hash changed')
-    return protocol
+    return {**protocol,'input_file':str(candidate)}

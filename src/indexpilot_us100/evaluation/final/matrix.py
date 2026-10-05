@@ -12,7 +12,7 @@ def scenarios(protocol):
     for cost in config['costs_bps']:
         for seed in config['seeds']:
             for risk_lambda in (config['reference_lambda'],config['primary_lambda']):
-                rows.append(dict(kind='rl',seed=seed,risk_lambda=risk_lambda,cost_bps=cost))
+                rows.append(dict(kind='rl',policy=f'q_lambda_{risk_lambda:g}',seed=seed,risk_lambda=risk_lambda,cost_bps=cost))
         rows.extend(baseline_scenarios(protocol,cost))
     return [{**row,'scenario_id':scenario_id(row)} for row in rows]
 
