@@ -17,6 +17,7 @@ charts = ["finplot>=1.9.7,<2"]
 dev = ["pytest>=8,<9"]
 
 [project.scripts]
+indexpilot-chart = "indexpilot_us100.evaluation.chart:main"
 indexpilot-simulate = "indexpilot_us100.evaluation.cli:main"
 indexpilot-fetch = "indexpilot_us100.data.download:main"
 indexpilot-process = "indexpilot_us100.data.download:process_main"
