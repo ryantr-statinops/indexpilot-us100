@@ -45,3 +45,17 @@ Use `uv run indexpilot-fetch --help` to change ticker, dates, or output director
 The downloader uses yfinance to access Yahoo Finance data. yfinance is not affiliated with Yahoo and notes that the API is intended for personal use; Yahoo says its Finance data must not be redistributed and is informational, not intended for trading. Review the [yfinance usage note](https://github.com/ranaroussi/yfinance#download-market-data-from-yahoo-finances-api) and [Yahoo data terms](https://uk.help.yahoo.com/kb/exchanges-data-providers-yahoo-finance-sln2310.html) before sharing or using data beyond this local personal project. The snapshot is not a point-in-time US100 constituent history or a live-trading feed. See the assumptions document for current modeling limits and unresolved decisions.
 
 yfinance returns a pandas DataFrame; the downloader uses pandas only at that adapter boundary and normalizes data into Polars immediately for project processing.
+
+## Simulate and inspect baselines
+
+See the [Stage 2 walkthrough](docs/stage-2-simulator.md) for accounting examples, metric conventions, local AAPL results, and fee sensitivity.
+
+```bash
+uv sync --extra dev
+uv run pytest -q
+uv run indexpilot-simulate --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet --config configs/stage-2.toml --output-dir outputs/stage-2/aapl-default
+uv sync --extra dev --extra charts
+uv run indexpilot-chart --run-dir outputs/stage-2/aapl-default
+```
+
+Use a new output directory or `--overwrite` for an existing Stage 2 run. The simulator requires a local Stage 1 snapshot; charts additionally require a desktop display. Outputs stay local. Baseline results on the full historical sample are diagnostics, not an out-of-sample RL evaluation.

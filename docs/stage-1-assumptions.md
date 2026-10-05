@@ -78,4 +78,4 @@ For the simulator's adjusted-open convention, adjusted open is 24.6271994096 on 
 
 ### Position arithmetic illustration
 
-If starting equity is $100,000 and target exposure is 0.5, target notional is $50,000. At a hypothetical fill price of $100, that corresponds to approximately 500 synthetic units before costs. The exact post-fee target solves the equation above. If the stock's holding-period total return is 2%, portfolio return is \(0.5\times 2\%=1\%\), or $1,000 before transaction cost. Under the provisional cost rule, moving from flat to 0.5 costs \(0.001\times|0.5-0|=0.0005\) of equity ($50). The risk penalty is scored separately and does not change equity.
+Stage 2 uses synthetic fractional holdings and cash, revising the preliminary exposure-only model. With $100,000 equity, price $100, target +0.5 and a 10bps fee, target notional is `0.5*100000/(1+0.5*0.001) = $49,975.012494`; the fee is $49.975012. The target is 50% of post-fee equity, not exactly $50,000 before fees. Gross holding-period P&L is units times the adjusted-open price change. See [Stage 2 walkthrough](stage-2-simulator.md) for a full entry/exit example and metric definitions.
