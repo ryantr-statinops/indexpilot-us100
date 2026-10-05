@@ -59,8 +59,8 @@ class Execution:
 
 def rebalance(account: Account, price: float, target: TargetExposure | HoldPosition, cost_rate: float = 0.0) -> tuple[Account, Execution]:
     validate_price(price)
-    if cost_rate != 0:
-        raise ValueError('Costs are not supported yet')
+    if not math.isfinite(cost_rate) or not 0 <= cost_rate < 1:
+        raise ValueError('Cost rate must be finite and in [0, 1)')
     equity = account.equity(price)
     if equity <= 0:
         raise ValueError('Cannot rebalance a non-positive account')
@@ -68,7 +68,16 @@ def rebalance(account: Account, price: float, target: TargetExposure | HoldPosit
         return account, Execution(account, account, price, None, 0.)
     if not isinstance(target, TargetExposure):
         raise TypeError('Expected TargetExposure or HoldPosition')
-    notional = target.value * equity
-    delta = notional - account.holdings * price
-    after = Account(account.cash - delta, notional / price)
-    return after, Execution(account, after, price, target.value, abs(delta))
+    current = account.holdings * price
+    direction = 1. if target.value * equity >= current else -1.
+    notional = target.value * (equity + cost_rate * direction * current) / (1 + target.value * cost_rate * direction)
+    delta = notional - current
+    if abs(delta) <= 1e-12 * max(equity, abs(current)):
+        return account, Execution(account, account, price, target.value, 0.)
+    fee = cost_rate * abs(delta)
+    after = Account(account.cash - delta - fee, notional / price)
+    if after.equity(price) <= 0:
+        raise ValueError('Insufficient equity for target after fees')
+    if not math.isclose(after.exposure(price), target.value, rel_tol=1e-10, abs_tol=1e-10):
+        raise ValueError('Target equation failed numerical verification')
+    return after, Execution(account, after, price, target.value, abs(delta), fee)
