@@ -10,11 +10,11 @@ Define a small experiment and prepare historical data whose timing and meaning a
 
 - [x] State the learning/research question in one sentence; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
 - [x] Record the confirmed reward formula `R_t = r_{p,t} - λσ_t - c_t`; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md). The risk statistic/window is deferred to Stage 3.
-- [ ] Confirm the proposed interpretation of action \(a_t\in[-1,1]\) as signed target notional exposure; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
-- [ ] Specify whether shorting/leverage is allowed and set position limits. For a first run, long-only is a simpler option.
+- [x] Define action \(a_t\in[-1,1]\) as signed target notional exposure, with no leverage and five initial Q-learning levels; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
+- [x] Specify shorting and exposure limits: allow symmetric short exposure, cap gross exposure at 100%, and omit financing/margin mechanics in version 1.
 - [x] Choose one ticker, date range, and decision frequency for the data prototype: AAPL, daily, requested from 2015-01-01.
-- [ ] Set the timing: observation → decision → execution price → holding interval → reward.
-- [ ] Define initial capital, cash behavior, and episode boundaries.
+- [x] Set causal timing, adjusted-open return convention, and holding interval; see assumptions document.
+- [x] Define initial capital ($100,000), zero-return cash, flat episode start, and terminal liquidation/cost.
 
 ### Prepare data
 
@@ -23,8 +23,8 @@ Define a small experiment and prepare historical data whose timing and meaning a
 - [x] Choose an adjusted-price convention for return features; corporate actions are saved, while OHLC remain unadjusted and are not yet used for P&L.
 - [x] Inspect duplicate dates, null values, non-trading-day handling, invalid prices, and corporate-action fields.
 - [x] Compute adjusted-close simple/log returns and verify a sample by hand.
-- [ ] Ensure every feature at time \(t\) uses only information available by \(t\).
-- [ ] If scaling features, fit scaling parameters on training data only.
+- [x] Define initial observation features using only prior-session data; no current/future return enters the action observation.
+- [x] No fitted scaler is used for the first tabular version; future preprocessing must be fit on training data only.
 - [x] Keep credentials out of Git and downloaded data local/ignored by default.
 
 ## Deliverables
