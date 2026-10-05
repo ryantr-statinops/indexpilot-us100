@@ -40,3 +40,23 @@ def interval_reward(interval: Interval, volatility: float, risk_lambda: float = 
     cost = (interval.execution.fee + closing_fee) / interval.start_equity
     risk = abs(interval.account.holdings * interval.execution.price / interval.start_equity) * volatility
     return Reward(gross, cost, risk, gross - risk_lambda * risk - cost)
+
+
+@dataclass(frozen=True)
+class Finalization:
+    account: Account
+    execution: Execution
+    status: str
+
+
+def liquidate(account: Account, price: float, cost_rate: float) -> Finalization:
+    """Close units even when equity is nonpositive; retain resulting debt."""
+    import math
+    validate_price(price)
+    if not math.isfinite(cost_rate) or not 0 <= cost_rate < 1:
+        raise ValueError('Cost rate must be in [0, 1)')
+    notional = account.holdings * price
+    fee = abs(notional) * cost_rate
+    after = Account(account.cash + notional - fee, 0.)
+    execution = Execution(account, after, price, 0., abs(notional), fee)
+    return Finalization(after, execution, 'insolvent' if after.equity(price) <= 0 else 'completed')

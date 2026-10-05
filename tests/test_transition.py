@@ -24,3 +24,15 @@ def test_reward_cost_once():
     assert zero.value == pytest.approx(interval.net_return)
     assert penalized.value == pytest.approx(zero.value - 2 * zero.risk)
     assert interval_reward(interval, .02, closing_fee=50).value == pytest.approx(zero.value - .0005)
+
+
+def test_finalization_and_insolvency():
+    from indexpilot_us100.portfolio.transition import liquidate
+    result = liquidate(Account(0, 1000), 110, .001)
+    assert result.account.cash == 109890
+    assert result.account.holdings == 0
+    assert result.status == 'completed'
+    failed = liquidate(Account(200000, -1000), 210, .001)
+    assert failed.account.cash == -10210
+    assert failed.account.exposure(210) is None
+    assert failed.status == 'insolvent'
