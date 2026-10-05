@@ -1,0 +1,32 @@
+[project]
+name = "indexpilot-us100"
+version = "0.1.0"
+description = "A learning-focused reinforcement learning stock-market simulator"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0,<3",
+    "pandas>=2.2,<3",
+    "polars>=1.20,<2",
+    "statsmodels>=0.14,<1",
+    "yfinance>=0.2.54,<1",
+]
+
+[project.optional-dependencies]
+charts = ["finplot>=1.9.7,<2"]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+indexpilot-fetch = "indexpilot_us100.data.download:main"
+indexpilot-process = "indexpilot_us100.data.download:process_main"
+indexpilot-inspect = "indexpilot_us100.data.inspect:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/indexpilot_us100"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
