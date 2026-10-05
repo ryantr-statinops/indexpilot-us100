@@ -46,3 +46,35 @@ class MarketData:
 
 def load_market_data(path: str | Path) -> MarketData:
     return MarketData.from_frame(pl.read_parquet(path))
+
+
+@dataclass(frozen=True)
+class MarketFeatures:
+    return_1: float
+    return_5: float
+    return_20: float
+    volatility: float
+    prior_close: float
+    sma20: float
+
+
+def decision_indices(market: MarketData, risk_window: int = 20) -> range:
+    if type(risk_window) is not int or risk_window < 2:
+        raise ValueError('risk_window must be an integer >= 2')
+    start = max(20, risk_window) + 1
+    if start >= len(market.dates) - 1:
+        raise ValueError('Insufficient warm-up or no open-to-open holding interval')
+    return range(start, len(market.dates) - 1)
+
+
+def market_features(market: MarketData, index: int, risk_window: int = 20) -> MarketFeatures:
+    if index not in decision_indices(market, risk_window):
+        raise ValueError('Index is outside the eligible decision window')
+    closes = market.closes
+    # Ends at previous open, deliberately excluding the current-open return.
+    returns = market.opens[index-risk_window:index] / market.opens[index-risk_window-1:index-1] - 1
+    return MarketFeatures(
+        *(float(closes[index-1] / closes[index-1-lag] - 1) for lag in (1, 5, 20)),
+        float(np.std(returns, ddof=1)), float(closes[index-1]),
+        float(np.mean(closes[index-20:index])),
+    )

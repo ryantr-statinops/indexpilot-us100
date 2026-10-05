@@ -28,3 +28,16 @@ def test_dates_and_missing():
     for data in (frame().reverse(), frame().with_columns(pl.lit(date(2020, 1, 1)).alias('date')), frame().drop('adj_open'), frame().head(1)):
         with pytest.raises(ValueError):
             MarketData.from_frame(data)
+
+
+def test_causal_window():
+    from indexpilot_us100.portfolio.market import decision_indices, market_features
+    market = MarketData.from_frame(frame())
+    assert list(decision_indices(market))[0] == 21
+    features = market_features(market, 21)
+    assert features.return_20 == pytest.approx(121 / 101 - 1)
+    assert features.volatility == pytest.approx(np.std(np.arange(101., 121.) / np.arange(100., 120.) - 1, ddof=1))
+    changed = frame().with_columns(pl.when(pl.int_range(pl.len()) >= 21).then(999.).otherwise(pl.col('adj_open')).alias('adj_open'), pl.when(pl.int_range(pl.len()) >= 21).then(777.).otherwise(pl.col('adj_close')).alias('adj_close'))
+    assert market_features(MarketData.from_frame(changed), 21) == features
+    with pytest.raises(ValueError, match='warm-up'):
+        decision_indices(MarketData.from_frame(frame(22)))
