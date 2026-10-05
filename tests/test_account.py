@@ -11,3 +11,17 @@ def test_valuation():
         Account(100).equity(0)
     with pytest.raises(ValueError):
         Account(float('nan'))
+
+
+def test_free_rebalance_and_hold():
+    from indexpilot_us100.portfolio.account import TargetExposure, HoldPosition, rebalance
+    account = Account(100000)
+    for target in (-1., -.5, 0., .5, 1.):
+        after, execution = rebalance(account, 100., TargetExposure(target))
+        assert after.exposure(100) == pytest.approx(target)
+        assert after.equity(100) == 100000
+        held, _ = rebalance(after, 120, HoldPosition())
+        assert held == after
+    for target in (-1.01, 1.01, float('nan')):
+        with pytest.raises(ValueError):
+            TargetExposure(target)
