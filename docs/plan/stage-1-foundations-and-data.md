@@ -41,4 +41,4 @@ Define a small experiment and prepare historical data whose timing and meaning a
 
 ## Keep out of the first pass
 
-The full 100-stock universe, PPO, live trading, and complex market impact. First make one asset understandable and auditable.
+The full US100 universe, PPO, live trading, and complex market impact. Here, US100 means the 100 largest U.S.-listed companies by market capitalization at each universe formation date, not the S&P 100 or Nasdaq-100 index. First make one asset understandable and auditable.
