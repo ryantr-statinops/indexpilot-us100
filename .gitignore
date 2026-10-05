@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Downloaded market data, including manifests tied to local snapshots.
+/data/
+
+# Local experiment outputs and model checkpoints.
+/outputs/
+/runs/
