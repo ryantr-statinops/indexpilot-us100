@@ -20,3 +20,11 @@ def test_chart_adapter_without_gui(tmp_path):
     assert list(series[0]['equity']) == [100000] * len(result.equity)
     assert list(series[0]['drawdown']) == [0] * len(result.equity)
     assert 'finplot' not in sys.modules
+
+
+def test_missing_optional_dependency(monkeypatch):
+    import pytest
+    from indexpilot_us100.evaluation.chart import create_chart
+    monkeypatch.setitem(sys.modules, 'finplot', None)
+    with pytest.raises(RuntimeError, match='uv sync'):
+        create_chart([])
