@@ -91,3 +91,7 @@ Tabular Q-learning for Stage 3 needs only Python and NumPy; it does not need PyT
 - What conventions define the five metrics?
 
 Resolve only what the current stage needs. A successful learning project does not need RL to outperform the market; it needs a correct, fair, and interpretable experiment.
+
+## Stage 2 accounting contract
+
+Targets are post-fee equity fractions; holdings/cash and actual traded notional determine P&L and costs. HoldPosition preserves units. Short exposure may drift beyond the target bounds; insolvency closes the position. See `docs/stage-1-assumptions.md` for the revised contract.

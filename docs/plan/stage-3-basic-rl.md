@@ -9,9 +9,9 @@ Learn the RL loop on the verified simulator with a compact, discrete-action, one
 Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 
 - **State/observation:** lagged market features plus position/portfolio variables needed for the next decision.
-- **Action:** discrete target exposures \(\{-1,-0.5,0,0.5,1\}\) as set in Stage 1; short exposure uses the documented simplified return model.
+- **Action:** discrete target exposures \(\{-1,-0.5,0,0.5,1\}\) as set in Stage 1; short exposure uses synthetic holdings/cash accounting.
 - **Transition:** advance one historical step and update accounting.
-- **Reward:** use \(R_t=r_{p,t}-\lambda\sigma_t-c_t\) with Stage 1's provisional 20-session risk proxy and turnover cost. Run a return-only reference (\(\lambda=0\)) and compare with a predeclared \(\lambda\) grid. Keep the risk penalty out of account equity and charge transaction cost exactly once.
+- **Reward:** use \(R_t=r_{p,t}-\lambda\sigma_t-c_t\) with the causal 20-session risk proxy and actual traded-notional cost. Run a return-only reference (\(\lambda=0\)) and compare with a predeclared \(\lambda\) grid. Keep the risk penalty out of account equity and charge transaction cost exactly once.
 - **Discount:** record \(\gamma\) and explain its role for finite episodes.
 - **Episode:** contiguous training segment; distinguish natural data end from an artificial time limit.
 
