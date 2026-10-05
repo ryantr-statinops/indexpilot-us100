@@ -7,8 +7,7 @@ A learning-focused reinforcement learning project for stock-positioning simulati
 - Project plan: [`docs/plan/README.md`](docs/plan/README.md)
 - Stage 1 assumptions and data workflow: [`docs/stage-1-assumptions.md`](docs/stage-1-assumptions.md)
 - Stage 1 downloaded-data profile: [`docs/stage-1-data-profile.md`](docs/stage-1-data-profile.md)
-- Stage 1 is in progress: the local historical-data snapshot, repeatable processing, and exploratory summary are in place. The exact decision formula and final action/execution semantics still need confirmation; no trading policy or RL agent is implemented yet.
-- Stage 1 downloaded-data profile: [`docs/stage-1-data-profile.md`](docs/stage-1-data-profile.md)
+- Stage 1 is in progress: the local historical-data snapshot, repeatable processing, and exploratory summary are in place. The reward formula is confirmed; action/execution semantics and the exact risk statistic still need to be finalized. No trading policy or RL agent is implemented yet.
 
 ## Setup
 
