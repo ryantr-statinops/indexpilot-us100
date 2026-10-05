@@ -7,7 +7,7 @@ A learning-focused reinforcement learning project for stock-positioning simulati
 - Project plan: [`docs/plan/README.md`](docs/plan/README.md)
 - Stage 1 assumptions and data workflow: [`docs/stage-1-assumptions.md`](docs/stage-1-assumptions.md)
 - Stage 1 downloaded-data profile: [`docs/stage-1-data-profile.md`](docs/stage-1-data-profile.md)
-- Stage 1 is in progress: the local historical-data snapshot, repeatable processing, and exploratory summary are in place. The reward formula is confirmed; action/execution semantics and the exact risk statistic still need to be finalized. No trading policy or RL agent is implemented yet.
+- Stage 1 is complete: AAPL data pipeline, action/reward definitions, causal observation timing, and episode/accounting conventions are documented. Stage 2 is next; no trading policy or RL agent is implemented yet.
 
 ## Setup
 
@@ -29,7 +29,7 @@ uv sync --extra charts
 uv run indexpilot-fetch --ticker AAPL --start 2015-01-01 --end 2026-10-06 --output-dir data/raw
 ```
 
-`--start` is inclusive and `--end` is exclusive. The command writes a normalized CSV snapshot of the source response, a processed Parquet file with adjusted-close simple/log returns, and a JSON manifest with retrieval parameters, quality checks, package version, and SHA-256 hashes. Downloaded data and its manifest remain local under the ignored `data/` directory; do not commit or redistribute them without checking the provider's terms.
+`--start` is inclusive and `--end` is exclusive. The command writes a normalized CSV snapshot of the source response, a processed Parquet file with adjusted-close simple/log returns plus synthetic adjusted-open/open-to-open return columns, and a JSON manifest with retrieval parameters, quality checks, package version, and SHA-256 hashes. Downloaded data and its manifest remain local under the ignored `data/` directory; do not commit or redistribute them without checking the provider's terms.
 
 Reprocess the archived CSV without another network request, then inspect the processed file:
 
