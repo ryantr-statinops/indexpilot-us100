@@ -26,7 +26,7 @@ Learn reinforcement learning through a small, transparent stock-trading simulati
 - **Observation:** lagged market features and current position/portfolio information available at decision time.
 - **Action:** initially a small discrete set; later the continuous interval \([-1,1]\).
 - **Transition:** market advances and portfolio accounting updates.
-- **Reward:** start from next-period portfolio return after trading cost; introduce risk terms separately.
+- **Reward:** confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\); the risk measure/window and scaling are defined in Stage 3.
 - **Episode:** a contiguous historical segment with explicit start/end behavior.
 
 These details remain provisional until the relevant stage resolves them.
