@@ -8,7 +8,7 @@ from indexpilot_us100.agents.training import run_experiments
 from indexpilot_us100.metrics import compute_metrics
 from indexpilot_us100.portfolio.market import load_market_data
 from .cli import comparison_table
-from .learning_export import export_learning
+from .learning_export import export_learning, validate_learning_destination
 
 
 def main(argv=None):
@@ -20,9 +20,7 @@ def main(argv=None):
     parser.add_argument('--quiet',action='store_true')
     args=parser.parse_args(argv)
     try:
-        output=Path(args.output_dir)
-        if output.exists() and (not output.is_dir() or any(output.iterdir())) and not args.overwrite:
-            raise ValueError('Output exists; choose a new directory or --overwrite')
+        output=validate_learning_destination(args.data,args.output_dir,args.overwrite)
         simulation,learning=load_learning_config(args.config)
         market=load_market_data(args.data)
         progress=None if args.quiet else lambda message: print(message,flush=True)

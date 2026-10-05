@@ -27,3 +27,12 @@ def test_tie_exploration_and_save(tmp_path):
     np.testing.assert_array_equal(agent.q,loaded.q)
     np.testing.assert_array_equal(agent.visits,loaded.visits)
     with pytest.raises(ValueError): agent.update(0,0,float('nan'),None,True)
+
+
+def test_terminal_bandit_learns_known_best_action():
+    agent=QLearningAgent()
+    for _ in range(100):
+        for action,reward in enumerate([-1,-.5,0,1,.5]):
+            agent.update(0,action,reward,999999,True)
+    assert agent.choose(0)==3
+    assert agent.q[0,3]==pytest.approx(1,abs=.0001)

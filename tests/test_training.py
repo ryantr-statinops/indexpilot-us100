@@ -40,3 +40,17 @@ def test_reserved_test_values_never_change_learning():
     for a,b in zip(first,second):
         np.testing.assert_array_equal(a.agent.q,b.agent.q)
         assert a.validation.result.ledger==b.validation.result.ledger
+
+
+def test_validation_prices_do_not_fit_q_table():
+    from indexpilot_us100.portfolio.market import MarketData
+    data=synthetic_market()
+    opens,closes=data.opens.copy(),data.closes.copy()
+    opens[70:121]*=2; closes[70:121]*=.5
+    changed=MarketData(data.dates,opens,closes,data.warnings)
+    first,_=run_experiments(data,SimulationConfig(),config())
+    second,_=run_experiments(changed,SimulationConfig(),config())
+    for a,b in zip(first,second):
+        np.testing.assert_array_equal(a.agent.q,b.agent.q)
+        np.testing.assert_array_equal(a.agent.visits,b.agent.visits)
+        assert a.training_log==b.training_log

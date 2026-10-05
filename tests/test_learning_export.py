@@ -23,3 +23,14 @@ def test_model_artifacts(tmp_path):
     np.testing.assert_array_equal(restored.q,experiments[0].agent.q)
     assert json.loads((root/'diagnostics.json').read_text())['lambda_0/validation']['interval_count']>0
     with pytest.raises(ValueError): export_learning(experiments,selection,simulation,learning,source,root)
+
+
+def test_destination_is_checked_before_training(tmp_path):
+    from indexpilot_us100.evaluation.learning_export import validate_learning_destination
+    foreign=tmp_path/'foreign'; foreign.mkdir()
+    (foreign/'important').write_text('keep')
+    with pytest.raises(ValueError,match='Refusing'):
+        validate_learning_destination(tmp_path/'source.parquet',foreign,True)
+    assert (foreign/'important').read_text()=='keep'
+    with pytest.raises(ValueError,match='contain input'):
+        validate_learning_destination(tmp_path/'protected'/'source.parquet',tmp_path/'protected',True)

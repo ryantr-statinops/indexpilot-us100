@@ -23,7 +23,7 @@ def trajectory_diagnostics(trajectory, agent):
     return dict(action_counts={str(action):int(number) for action,number in zip(ACTIONS,counts)}, action_fractions={str(action):float(number/count) for action,number in zip(ACTIONS,counts)}, unseen_state_fraction=sum(agent.visits[t.state].sum()==0 for t in trajectory.transitions)/count, flat_fraction=float(counts[2]/count), total_reward=sum(t.reward for t in trajectory.transitions), interval_count=count, order_count=len(trajectory.result.orders), status=trajectory.result.status)
 
 
-def export_learning(experiments, selection, simulation, learning, input_path, output_dir, overwrite=False):
+def validate_learning_destination(input_path, output_dir, overwrite=False):
     output=Path(output_dir)
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         if not overwrite:
@@ -34,6 +34,12 @@ def export_learning(experiments, selection, simulation, learning, input_path, ou
     source=Path(input_path).resolve()
     if output.resolve()==source or output.resolve() in source.parents:
         raise ValueError('Output cannot contain input data')
+    return output
+
+
+def export_learning(experiments, selection, simulation, learning, input_path, output_dir, overwrite=False):
+    output=validate_learning_destination(input_path,output_dir,overwrite)
+    source=Path(input_path).resolve()
     output.parent.mkdir(parents=True,exist_ok=True)
     rows=[]
     schema={'state':pl.Int64,'action':pl.Int64,'reward':pl.Float64,'next_state':pl.Int64,'terminated':pl.Boolean,'date':pl.Date,'end_date':pl.Date}
