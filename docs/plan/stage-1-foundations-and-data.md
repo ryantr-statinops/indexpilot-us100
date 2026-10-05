@@ -9,7 +9,7 @@ Define a small experiment and prepare historical data whose timing and meaning a
 ### Define the task
 
 - [x] State the learning/research question in one sentence; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
-- [ ] Recover and record the exact decision formula mentioned in the project discussion; it is not included in the notes available here.
+- [x] Record the confirmed reward formula `R_t = r_{p,t} - λσ_t - c_t`; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md). The risk statistic/window is deferred to Stage 3.
 - [ ] Confirm the proposed interpretation of action \(a_t\in[-1,1]\) as signed target notional exposure; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
 - [ ] Specify whether shorting/leverage is allowed and set position limits. For a first run, long-only is a simpler option.
 - [x] Choose one ticker, date range, and decision frequency for the data prototype: AAPL, daily, requested from 2015-01-01.
