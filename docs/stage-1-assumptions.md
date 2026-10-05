@@ -22,15 +22,28 @@ The reward is:
 R_t = r_{p,t} - \lambda\sigma_t - c_t
 \]
 
-where \(r_{p,t}\) is portfolio return over the reward interval, \(\sigma_t\) is the chosen risk measure, \(c_t\) is transaction cost, and \(\lambda\) is the risk-aversion coefficient. The formula is confirmed; the exact risk measure/window and scaling of its penalty remain to be specified in Stage 3. Transaction cost must be represented consistently and subtracted only once. This reward formula defines how the agent is scored; it does not by itself define how an action maps into a market position.
+where \(r_{p,t}\) is portfolio return over the holding interval, \(\sigma_t\) is the risk measure, \(c_t\) is transaction cost, and \(\lambda\) is the risk-aversion coefficient. The formula is confirmed. The version 1 definitions below make the terms concrete for the single-stock simulation. Transaction cost is charged once in both portfolio accounting and reward; the risk penalty affects reward only, not account equity.
 
-## Not yet specified
+## Version 1 decision and simulation conventions
 
-- The exact risk statistic/window for \(\sigma_t\), units/normalization for \(\lambda\), and precise transaction-cost model for \(c_t\) will be selected in later stages.
-- **Proposed action interpretation, pending confirmation:** \(a_t\in[-1,1]\) is signed target notional exposure as a fraction of current equity; -1 is 100% short notional, 0 is flat, +1 is 100% long notional, and absolute gross exposure cannot exceed 100%. The first simulator would omit borrowing fees, margin calls, and liquidation mechanics unless these are added deliberately.
-- **Proposed timing, pending confirmation:** at market open \(t\), form the observation using information through the previous session close, set the target position at that open, and measure the holding-period outcome to the next session open. The historical open-price adjustment/corporate-action accounting still needs a consistent Stage 2 convention.
-- The exact training/evaluation date splits and selected feature set are deferred to later stages.
-- The future US100 membership must be point-in-time by market capitalization and reconstitution date. A current list applied to historical dates would create survivorship bias.
+These are explicit, simplified version 1 conventions chosen to complete the single-stock learning specification. They are not claims about real brokerage execution and can be revised before Stage 2 implementation.
+
+- **Action:** \(a_t\in[-1,1]\) is signed target notional exposure as a fraction of current equity. -1 means 100% short notional, 0 means flat, and +1 means 100% long notional. Gross exposure is capped at 100%, so no leverage above equity. The continuous interval is the project concept; tabular Q-learning will use the five actions \(\{-1,-0.5,0,0.5,1\}\).
+- **Shorting simplification:** short positions are modeled symmetrically through signed returns. Version 1 omits borrow fees, margin calls, forced liquidation, and financing. This is a teaching simulator, not a broker-accurate short account.
+- **Observation and execution timing:** at market open \(t\), the agent receives state features calculated only from data through the previous session close, chooses \(a_t\), and rebalances at the current open. The position earns the adjusted-open-to-adjusted-open total return through the next session open. This uses a synthetic adjusted-open price for research accounting; it is not a claim about an executable fill price.
+- **Price adjustment:** derive adjusted open as \(\text{Open}\times\text{Adj Close}/\text{Close}\), then calculate adjusted-open-to-adjusted-open return. The adjustment factor incorporates historical distributions/splits in the total-return series; do not separately add dividends to this synthetic-return calculation. Unadjusted OHLC remain available for inspection only.
+- **Portfolio return:** \(r_{p,t}=a_t r_{asset,t}\); unallocated cash earns 0% in version 1. Equity evolves as \(E_{t+1}=E_t(1+r_{p,t}-c_t)\). Start with \$100,000 and zero exposure.
+- **Risk measure:** \(\sigma_t=|a_t|\,s_{20,t}\), where \(s_{20,t}\) is the sample standard deviation of the last 20 synthetic adjusted-open-to-adjusted-open asset returns available at the decision time. It is an ex ante, non-annualized daily portfolio-volatility proxy in return units; the first eligible action requires 20 historical returns.
+- **Risk-aversion sweep:** start with \(\lambda\in\{0,0.5,1,2\}\). Both portfolio return and daily volatility are expressed as per-period fractions, so this coefficient is dimensionless. Select among settings on validation data, not the final test interval.
+- **Transaction cost:** \(c_t=0.001|a_t-a_{t-1}|\), a provisional 10 basis-point cost per unit of notional turnover, expressed as a fraction of equity. Reversing from -1 to +1 therefore incurs twice the one-way notional cost. This is a configurable simulation assumption, not a measured AAPL fee schedule; Stage 2 should make it configurable and inspect sensitivity.
+- **Episode:** one contiguous historical interval. Each episode starts with \$100,000 and zero exposure. The ending exposure is liquidated and the closing turnover cost is charged. Train/validation/test intervals will be kept chronological and handled separately in Stage 4.
+- **Initial state features:** lagged 1-, 5-, and 20-session adjusted-close returns, 20-session asset volatility, current target exposure, and portfolio drawdown. Each feature is available by the open-time decision; the exact tabular bins are set in Stage 3. No fitted scaler is used in the first tabular version.
+
+## Deferred beyond Stage 1
+
+- Exact chronological train/validation/test dates and walk-forward design (Stage 4).
+- Cost sensitivity and any richer slippage/borrow/financing model (Stage 2+).
+- Point-in-time US100 membership by market capitalization and reconstitution date. A current list applied to old dates creates survivorship bias (universe extension).
 
 ## Reproducible commands
 
@@ -47,14 +60,20 @@ Replace the exclusive end date with the next calendar date when refreshing data 
 
 ### Return calculation
 
-In the current AAPL snapshot, adjusted close is 24.1717548370 on 2015-01-02 and 23.4907932281 on 2015-01-05. The simple adjusted-price return is:
+In the current AAPL snapshot, adjusted close is 24.1717548370 on 2015-01-02 and 23.4907970428 on 2015-01-05. The simple adjusted-close return is:
 
 ```text
-23.4908008575 / 24.1717643738 - 1 = -0.02817186 (about -2.8172%)
+23.4907970428 / 24.1717548370 - 1 = -0.02817163 (about -2.8172%)
 ```
 
 This verifies the return calculation. It does not define an executable strategy or imply that an action could fill at either day's closing price.
 
-### Position arithmetic illustration (not yet the trading rule)
+For the simulator's adjusted-open convention, adjusted open is 24.6271994096 on 2015-01-02 and 23.9418205485 on 2015-01-05:
 
-If starting equity is $100,000 and a future simulator convention defines target exposure as 0.5, then target notional is $50,000. At a hypothetical fill price of $100, that corresponds to 500 shares before costs. If those shares are held while price moves to $102, gross P&L is $1,000, or 1% of starting equity before cash yield, dividends, fees, and any other assumptions. This is a sizing illustration, not a finalized execution/accounting rule.
+```text
+23.9418205485 / 24.6271994096 - 1 = -0.02783016 (about -2.7830%)
+```
+
+### Position arithmetic illustration
+
+If starting equity is $100,000 and target exposure is 0.5, target notional is $50,000. At a hypothetical fill price of $100, that corresponds to 500 shares before costs. If the stock's holding-period total return is 2%, portfolio return is \(0.5\times 2\%=1\%\), or $1,000 before transaction cost. Under the provisional cost rule, moving from flat to 0.5 costs \(0.001\times|0.5-0|=0.0005\) of equity ($50). The risk penalty is scored separately and does not change equity.
