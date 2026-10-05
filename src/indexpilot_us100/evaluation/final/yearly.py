@@ -15,7 +15,8 @@ def yearly_summary(scenario,intervals,decisions,events,trades,protocol):
     output=[]
     for year,records in sorted(groups.items()):
         first,last=records[0][0]['date'],records[-1][0]['end_date']
-        counts={}
+        counts={str(action):0 for action in (-1.,-.5,0.,.5,1.)}
+        counts['hold']=0
         for _,decision,_ in records:
             target='hold' if decision['target'] is None else str(decision['target'])
             counts[target]=counts.get(target,0)+1

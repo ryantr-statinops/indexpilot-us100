@@ -28,6 +28,8 @@ def validate_source(input_path,source_run,config: EvaluationConfig):
     if manifest['input_sha256']!=file_hash(Path(input_path)):
         raise ValueError('Data hash differs from Stage 3 snapshot')
     selection=json.loads((root/'selection.json').read_text())
+    if selection.get('status')!='selected' or selection.get('test_evaluated') is not False:
+        raise ValueError('Source selection must precede reserved test evaluation')
     if selection!=manifest['selection'] or selection['selected_lambda']!=config.primary_lambda:
         raise ValueError('Selection does not match frozen primary lambda')
     expected=dict(features=list(FEATURE_NAMES),bin_edges=[list(edges) for edges in BIN_EDGES],state_count=STATE_COUNT,actions=list(ACTIONS))

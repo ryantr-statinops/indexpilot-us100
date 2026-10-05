@@ -12,12 +12,14 @@ def drawdown_events(ledger):
     peak=int(np.flatnonzero(values[:trough+1]==np.max(values[:trough+1]))[-1])
     recovered=np.flatnonzero(values[trough+1:]>=values[peak])
     recovery=int(trough+1+recovered[0]) if len(recovered) else None
-    high=values[0]; peak_day=ledger[0]['date']; max_days=0
+    high=values[0]; peak_day=ledger[0]['date']; max_days=0; underwater=False
     for row in ledger:
         if row['equity']>=high:
+            if underwater: max_days=max(max_days,(row['date']-peak_day).days)
+            high=row['equity']; peak_day=row['date']; underwater=False
+        else:
+            underwater=True
             max_days=max(max_days,(row['date']-peak_day).days)
-            high=row['equity']; peak_day=row['date']
-        else: max_days=max(max_days,(row['date']-peak_day).days)
     return dict(max_drawdown=float(dd[trough]),peak_sequence=ledger[peak]['sequence'],trough_sequence=ledger[trough]['sequence'],recovery_sequence=ledger[recovery]['sequence'] if recovery is not None else None,peak_date=ledger[peak]['date'].isoformat(),trough_date=ledger[trough]['date'].isoformat(),recovery_date=ledger[recovery]['date'].isoformat() if recovery is not None else None,max_underwater_calendar_days=max_days)
 
 
