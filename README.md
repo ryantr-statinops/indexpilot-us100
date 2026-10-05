@@ -7,7 +7,11 @@ A learning-focused reinforcement learning project for stock-positioning simulati
 - Project plan: [`docs/plan/README.md`](docs/plan/README.md)
 - Stage 1 assumptions and data workflow: [`docs/stage-1-assumptions.md`](docs/stage-1-assumptions.md)
 - Stage 1 downloaded-data profile: [`docs/stage-1-data-profile.md`](docs/stage-1-data-profile.md)
-- Stage 1 is complete: AAPL data pipeline, action/reward definitions, causal observation timing, and episode/accounting conventions are documented. Stage 2 is complete: holdings/cash simulator, six baseline policies, five metrics, audited exports and FinPlot viewer. 103 automated tests pass. Stage 3 is complete: NumPy tabular Q-learning, fixed causal state bins, episode replay, a validation-only lambda sweep, saved models and diagnostics. 129 tests pass. Stage 4 evaluation on the reserved RL test period is next.
+- **Stage 1 complete:** causal AAPL data pipeline and modeling assumptions.
+- **Stage 2 complete:** holdings/cash accounting, six baselines, five metrics and FinPlot.
+- **Stage 3 complete:** NumPy Q-learning, frozen state bins and validation-only lambda selection.
+- **Stage 4 complete:** locked test protocol, 10 models, 60 seed/cost scenarios, immutable greedy evaluation, activity/yearly diagnostics and independent replay.
+- **175 tests pass**, including a fresh checkout/environment. [Final report](docs/REPORT.md) and [Stage 4 reproduction guide](docs/stage-4-evaluation.md).
 
 ## Setup
 
@@ -69,4 +73,24 @@ uv run indexpilot-train --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_proc
 uv run indexpilot-chart --run-dir outputs/stage-3/aapl-default
 ```
 
-Training uses data through2020 and validation2021–2022. The RL test period from2023 is reserved. Selection favors lambda2 on validation Sharpe, but that policy is flat99.8% of decisions and has only one validation trade; see the report before interpreting the metrics. Output directories are local and not committed.
+Training uses data through 2020 and validation 2021–2022. Selection favors lambda 2 on validation Sharpe, with one validation trade and 99.8% flat decisions. Stage 4 has evaluated the predeclared test from 2023; selection is unchanged. Output directories are local and not committed.
+
+
+## Final evaluation and report
+
+Actual test coverage: **2023-01-03 → 2026-10-02**, 940 intervals; 2026 is incomplete. Primary lambda 2/seed 42/10 bps returned **−0.76%**, with only **2 active intervals**; reference lambda 0 returned **−17.42%**. Buy-and-hold returned **+159.85%**. Read activity, seed/cost variability and limitations alongside the financial metrics.
+
+```bash
+uv sync --python 3.11.16 --frozen --extra dev --extra charts
+uv run indexpilot-evaluate prepare --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet --source-run outputs/stage-3/aapl-default --config configs/stage-4.toml --output-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate run --protocol-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
+```
+
+Preparation requires an unused output directory, the Stage 3 source artifacts and the exact archived snapshot. For the existing experiment, run/verify reuse the frozen inventory; no training occurs. A completed run is integrity-checked before reuse. Verification recomputes separately. Creating another protocol after test completion requires an explicit reason.
+
+Data, checkpoints and detailed results remain local outside Git. The local archive `outputs/stage-4/aapl-reproduction.tar.gz` packages the matching snapshot and artifacts; see the reproduction guide for restoring them and using `--data` when the snapshot moves. A new Yahoo download is not assumed identical.
+
+The four-stage AAPL prototype is complete. Historical US100 membership, multi-asset allocation, PPO and walk-forward are backlog items.

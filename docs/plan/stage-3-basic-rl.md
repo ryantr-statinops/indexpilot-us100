@@ -2,7 +2,7 @@
 
 ## Status
 
-Complete. [MDP contract](../stage-3-mdp.md) and [learning walkthrough/results](../stage-3-learning.md) describe the episode replay schedule, fixed bins, validation protocol and limitations. 129 tests pass. Full AAPL training was repeated and restored models reproduce evaluation. RL test data from2023 remains reserved.
+Complete. [MDP contract](../stage-3-mdp.md) and [learning walkthrough/results](../stage-3-learning.md) describe the episode replay schedule, fixed bins, validation protocol and limitations. 129 tests pass. Full AAPL training was repeated and restored models reproduce evaluation. At the Stage 3 checkpoint, RL test data from 2023 was reserved; Stage 4 has since completed the frozen evaluation.
 
 ## Goal
 
@@ -70,7 +70,7 @@ Use Gymnasium if a standard environment API helps. It is not necessary to hide t
 - Changing validation/test prices cannot change trained Q; evaluation does not update visits.
 - Two full AAPL trainings produce identical Q/visits/logs/validation summaries; restored-model evaluation gives identical equity.
 - Selected lambda2 has only one validation trade and99.8% flat decisions; report records inactivity and sparse-sample metrics explicitly.
-- Sharpe-selected validation model is a prototype checkpoint, not a test result. Stage4 remains pending.
+- Sharpe-selected validation model is a prototype checkpoint, not a test result. Stage 4 now documents the separately frozen test result.
 
 ## Small commits
 

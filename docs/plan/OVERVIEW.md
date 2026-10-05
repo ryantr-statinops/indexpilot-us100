@@ -29,7 +29,7 @@ Learn reinforcement learning through a small, transparent stock-trading simulati
 - **Reward:** confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\); Stage 2 implements the lagged sample-volatility proxy, gross return and cost fractions.
 - **Episode:** a contiguous historical segment with explicit start/end behavior.
 
-Accounting, timing and baseline metrics are implemented. Stage 3 implements fixed discretization and NumPy Q-learning using finalized episode replay. Stage 4 remains pending.
+Accounting, timing and baseline metrics are implemented. Stage 3 implements fixed discretization and NumPy Q-learning using finalized episode replay. Stage 4 is complete: 10 frozen models, 60 test scenarios, activity/seed/cost/yearly diagnostics and independent clean-environment replay.
 
 ## Metrics
 
@@ -45,7 +45,7 @@ The requested scorecard is Sharpe ratio, maximum drawdown, CAGR, profit factor, 
 | Statistical analysis | statsmodels |
 | Financial charts | FinPlot |
 | First agent | Plain Python/NumPy tabular Q-learning |
-| Environment API | Gymnasium, once the MDP is defined |
+| Environment API | Project TradingEnvironment episode API; Gymnasium deferred |
 | Later deep RL option | PyTorch with Stable-Baselines3 PPO; see backend alternatives below |
 | Packaging and environment management | `uv` with `pyproject.toml` |
 | Verification | pytest for accounting, environment and metric examples |
@@ -82,7 +82,7 @@ Tabular Q-learning for Stage 3 needs only Python and NumPy; it does not need PyT
 
 ## Open decisions
 
-- Stage 4 evaluation and robustness protocol for the reserved RL test period. Stage 3 prototype boundaries and settings are already in `configs/stage-3.toml`; retain these before evaluating the test period.
+- Core AAPL protocol is complete; test results do not change the selected lambda/seed. See [report](../REPORT.md).
 - Point-in-time US100 membership source and reconstitution schedule for the optional universe extension.
 
 Resolve only what the current stage needs. A successful learning project does not need RL to outperform the market; it needs a correct, fair, and interpretable experiment.
@@ -93,4 +93,8 @@ Targets are post-fee equity fractions; holdings/cash and actual traded notional 
 
 ## Stage 3 checkpoint
 
-Fixed state bins, five discrete targets and episode replay Q-learning are implemented. Train through2020, validation2021–2022, RL test from2023 reserved. Lambda2 is selected by validation Sharpe but its single-trade/near-flat behavior is documented in `docs/stage-3-learning.md`.
+Fixed state bins, five discrete targets and episode replay Q-learning are implemented. Train through2020, validation2021–2022, RL test from 2023 evaluated under the frozen Stage 4 protocol. Lambda2 is selected by validation Sharpe but its single-trade/near-flat behavior is documented in `docs/stage-3-learning.md`.
+
+## Stage 4 checkpoint
+
+All 60 scenarios completed on 2023-01-03–2026-10-02. Primary lambda 2/seed 42/10 bps returned −0.76% with only two active intervals; this prototype does not establish predictive skill. 175 tests pass, and independent replay in a fresh checkout/venv matches saved decisions, accounting and summaries. Snapshot/models remain local and are required for exact reproduction. [Reproduction guide](../stage-4-evaluation.md).

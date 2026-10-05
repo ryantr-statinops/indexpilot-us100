@@ -80,7 +80,7 @@ Implement and document the requested metrics:
 - Summary JSON/CSV and selected Parquet artifacts match byte-for-byte on repeated AAPL runs.
 - Final liquidation charges fees inside the last interval; risk penalties never alter equity.
 - Target bounds apply at execution; short drift is allowed. Early insolvency has its own coverage/status.
-- Full-sample AAPL comparisons are diagnostics. Stage3 RL and Stage4 out-of-sample evaluation remain pending.
+- Full-sample AAPL comparisons are diagnostics. Stages 3 and 4 have since completed training/validation and the separately frozen test evaluation.
 
 ## Small commit sequence
 

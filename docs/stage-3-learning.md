@@ -71,14 +71,14 @@ Config prototype đã lưu trước khi chạy:
 
 - Train: lịch sử đầu vào đến2020-12-31; warm-up bị loại khỏi evaluation.
 - Validation:2021-01-01 đến2022-12-31. Chỉ dùng các dòng trước đó làm warm-up; tài khoản bắt đầu lại flat.
-- RL test: từ2023-01-01, chưa chạy policy hoặc lựa chọn tham số trên đoạn này.
+- RL test: từ2023-01-01 được giữ riêng khi hoàn thành Stage 3; Stage 4 đã đánh giá bằng protocol khóa trước, không chọn lại tham số.
 - Lambda `[0,0.5,1,2]`;100 episode/model, seed42; giữ alpha, gamma, bins, phí và epsilon schedule giống nhau.
 - Greedy validation không update Q/visits. Baselines dùng cùng dates và execution engine, reset account giống policy RL.
 - Chọn lambda có Sharpe validation hữu hạn cao nhất; insolvent không được chọn. Ties giữ thứ tự grid. Tất cả undefined thì giữ reference lambda0 và ghi rõ fallback, không bịa winner.
 
 Reward vẫn là `gross_return - lambda*risk - cost`. Risk penalty không trừ vào equity. Reward training là **tổng reward theo interval**, không phải cumulative return hoặc CAGR. Exploratory training metrics, greedy train và greedy validation được ghi riêng.
 
-Selection dùng validation nên kết quả validation chưa phải kết luận cuối về generalization. Stage4 tiếp tục với model/protocol đã freeze và đoạn RL test chưa đánh giá. Không tự đổi bins/lambda sau khi xem test.
+Selection dùng validation nên kết quả validation chưa phải kết luận cuối về generalization. Stage 4 đã đánh giá model/protocol khóa trước trên test; xem [report](REPORT.md). Không tự đổi bins/lambda sau khi xem test.
 
 ## Đọc artifacts
 
@@ -150,4 +150,4 @@ Coverage thực tế: train **2015-02-03 → 2020-12-31**,1.489 intervals; valid
 - Khoảng3,39% validation states chưa được train ghé qua; greedy fallback ở đó là flat. Tỷ lệ flat cao của lambda2 không chỉ do unseen states.
 - Mỗi lambda vẫn có cùng dates, phí và accounting; financial metrics của baseline không đổi khi chỉ thay reward penalty.
 
-Không thay grid sau kết quả này. Stage4 nên đánh giá model đã chọn trên đoạn reserved, xem nhiều seeds và báo cả exposure/trade counts bên cạnh Sharpe. Tiêu chí hoàn thành Stage3 là hiểu và kiểm chứng vòng học; không bắt buộc vượt baseline.
+Không thay grid sau kết quả này. Stage 4 đã đánh giá model đã chọn, năm seeds và ba mức phí; [report](REPORT.md) báo activity/trade counts cùng Sharpe. Tiêu chí hoàn thành Stage3 là hiểu và kiểm chứng vòng học; không bắt buộc vượt baseline.
