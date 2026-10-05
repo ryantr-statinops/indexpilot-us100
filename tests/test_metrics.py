@@ -36,3 +36,16 @@ def test_insolvent_metrics():
     result = run_episode(market([100.] * 22 + [300., 400.]), ConstantPolicy(-1))
     metrics = compute_metrics(result).metrics
     assert metrics['sharpe'].status == metrics['cagr'].status == 'not_applicable'
+
+
+def test_profit_factor_and_calmar_edges():
+    from indexpilot_us100.metrics import Metric, profit_factor, calmar_ratio
+    assert profit_factor([100, -25, 50, -50, 0]).value == 2
+    assert profit_factor([-20]).value == 0
+    assert profit_factor([10]).status == 'positive_infinity'
+    assert profit_factor([]).status == profit_factor([0]).status == 'undefined'
+    assert calmar_ratio(Metric(.1), .2).value == .5
+    assert calmar_ratio(Metric(.1), 0).status == 'positive_infinity'
+    assert calmar_ratio(Metric(0), 0).status == 'undefined'
+    metrics = compute_metrics(run_episode(market(), CashPolicy())).metrics
+    assert set(metrics) == {'max_drawdown', 'sharpe', 'cagr', 'profit_factor', 'calmar'}

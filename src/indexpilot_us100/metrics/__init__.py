@@ -42,6 +42,8 @@ def compute_metrics(result: SimulationResult) -> MetricsReport:
     else:
         metrics['sharpe'] = sharpe_ratio([row['net_return'] for row in result.intervals], result.config.annualization, result.config.risk_free_annual)
         metrics['cagr'] = compound_growth(first['equity'], last['equity'], (last['date'] - first['date']).days)
+    metrics['profit_factor'] = profit_factor(trade_values)
+    metrics['calmar'] = Metric(None, 'not_applicable') if result.status == 'insolvent' else calmar_ratio(metrics['cagr'], metrics['max_drawdown'].value)
     return MetricsReport(summary, metrics)
 
 
@@ -65,3 +67,22 @@ def compound_growth(initial, final, elapsed_days) -> Metric:
     with np.errstate(over='ignore', invalid='ignore'):
         value = float(np.expm1(np.log(final / initial) * 365.25 / elapsed_days))
     return Metric(value) if np.isfinite(value) else Metric(None, 'undefined')
+
+
+def profit_factor(trade_pnls) -> Metric:
+    values = np.asarray(trade_pnls, dtype=np.float64)
+    if values.ndim != 1 or not np.all(np.isfinite(values)):
+        raise ValueError('Trade P&Ls must be finite')
+    gains = float(np.sum(values[values > 1e-8]))
+    losses = float(-np.sum(values[values < -1e-8]))
+    if losses:
+        return Metric(gains / losses)
+    return Metric(None, 'positive_infinity' if gains else 'undefined')
+
+
+def calmar_ratio(cagr: Metric, max_drawdown: float) -> Metric:
+    if cagr.value is None:
+        return Metric(None, cagr.status)
+    if max_drawdown == 0:
+        return Metric(None, 'positive_infinity' if cagr.value > 0 else 'undefined')
+    return Metric(cagr.value / max_drawdown)
