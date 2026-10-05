@@ -14,9 +14,19 @@
 - **Persistence:** raw CSV, processed Parquet, and JSON manifest are stored under `data/`, which is ignored by Git. The manifest records parameters, retrieval time, row/date coverage, quality checks, package version, and SHA-256 hashes.
 - **Dataframe adapter:** yfinance returns pandas-formatted data; pandas is an explicit compatibility dependency at the download boundary, after which values are normalized into Polars for processing.
 
+## Confirmed reward formula
+
+The reward is:
+
+\[
+R_t = r_{p,t} - \lambda\sigma_t - c_t
+\]
+
+where \(r_{p,t}\) is portfolio return over the reward interval, \(\sigma_t\) is the chosen risk measure, \(c_t\) is transaction cost, and \(\lambda\) is the risk-aversion coefficient. The formula is confirmed; the exact risk measure/window and scaling of its penalty remain to be specified in Stage 3. Transaction cost must be represented consistently and subtracted only once. This reward formula defines how the agent is scored; it does not by itself define how an action maps into a market position.
+
 ## Not yet specified
 
-- The decision formula referenced in the earlier discussion was not included in the notes available to this repository. It must be supplied before implementing it.
+- The exact risk statistic/window for \(\sigma_t\), units/normalization for \(\lambda\), and precise transaction-cost model for \(c_t\) will be selected in later stages.
 - **Proposed action interpretation, pending confirmation:** \(a_t\in[-1,1]\) is signed target notional exposure as a fraction of current equity; -1 is 100% short notional, 0 is flat, +1 is 100% long notional, and absolute gross exposure cannot exceed 100%. The first simulator would omit borrowing fees, margin calls, and liquidation mechanics unless these are added deliberately.
 - **Proposed timing, pending confirmation:** at market open \(t\), form the observation using information through the previous session close, set the target position at that open, and measure the holding-period outcome to the next session open. The historical open-price adjustment/corporate-action accounting still needs a consistent Stage 2 convention.
 - The exact training/evaluation date splits and selected feature set are deferred to later stages.
