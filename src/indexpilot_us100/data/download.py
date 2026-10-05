@@ -67,8 +67,10 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
         raise ValueError("Some rows have invalid dates.")
 
     data = data.with_columns(
+        (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
         pl.col("adj_close").pct_change().alias("simple_return"),
         (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
+        (pl.col("open") * pl.col("adj_close") / pl.col("close")).pct_change().alias("open_to_open_return"),
     )
     return data
 
@@ -125,7 +127,7 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
 
     # Persist the normalized source response including adjusted close and corporate actions.
     # The processed file below adds derived returns and uses Polars' typed Parquet output.
-    normalized.drop("simple_return", "log_return").write_csv(raw_path)
+    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
     normalized.write_parquet(processed_path)
 
     duplicate_dates = normalized.select(pl.col("date").is_duplicated().sum()).item()
@@ -133,7 +135,7 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         pl.any_horizontal(
             [
                 pl.col(name).is_null() | (pl.col(name) <= 0)
-                for name in ("open", "high", "low", "close", "adj_close")
+                for name in ("open", "high", "low", "close", "adj_close", "adj_open")
             ]
         )
     ).height
@@ -152,8 +154,9 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         "downloaded_at_utc": datetime.now(timezone.utc).isoformat(),
         "yfinance_version": yf.__version__,
         "price_convention": (
-            "Normalized source response saved with auto_adjust=False. Processed simple_return and "
-            "log_return are calculated from Yahoo's Adj Close; OHLC remain unadjusted."
+            "Normalized source response saved with auto_adjust=False. Processed simple_return and log_return "
+            "use Adj Close. adj_open and open_to_open_return use the synthetic total-return factor "
+            "Adj Close / Close applied to Open; source OHLC remain unadjusted."
         ),
         "rows": normalized.height,
         "first_date": str(normalized.get_column("date").min()),
