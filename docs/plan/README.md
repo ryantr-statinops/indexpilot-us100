@@ -17,4 +17,4 @@ This is a first RL learning project: simulate a stock-positioning task, build a 
 - Results include Sharpe, maximum drawdown, CAGR, profit factor, and Calmar, with conventions documented.
 - The README/report explains assumptions, limitations, and how to reproduce the experiment.
 
-Stages 1 and 2 are complete. The confirmed reward is `R = gross_portfolio_return - lambda*risk - cost`; Stage 2 defines causal risk and holdings/cash accounting. Next is Stage 3 Q-learning using the verified simulator. See [Stage 2 walkthrough](../stage-2-simulator.md) for commands and results.
+Stages 1, 2 and 3 are complete. The confirmed reward is `R = gross_portfolio_return - lambda*risk - cost`; Stage 2 defines causal risk and holdings/cash accounting. Stage 3 implements NumPy Q-learning on that simulator. Next is Stage 4 evaluation of the frozen model and protocol on the reserved RL test period. See [Stage 2 walkthrough](../stage-2-simulator.md) for simulator commands and results; see [Stage 3 walkthrough](../stage-3-learning.md) for training and validation.

@@ -1,5 +1,9 @@
 # Stage 3 — Basic RL
 
+## Status
+
+Complete. [MDP contract](../stage-3-mdp.md) and [learning walkthrough/results](../stage-3-learning.md) describe the episode replay schedule, fixed bins, validation protocol and limitations. 129 tests pass. Full AAPL training was repeated and restored models reproduce evaluation. RL test data from2023 remains reserved.
+
 ## Goal
 
 Learn the RL loop on the verified simulator with a compact, discrete-action, one-stock problem.
@@ -17,23 +21,23 @@ Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 
 ## Checklist
 
-- [ ] Pin down observation/action/reward/execution timing.
-- [ ] Include prior position if it is needed to calculate costs and preserve the Markov state.
-- [ ] Confirm no future return or feature appears in an observation.
-- [ ] Specify observation bounds, data types, scaling, reset, seed, termination, and final-position behavior.
-- [ ] Implement a small tabular Q-learning agent directly in Python/NumPy: exploration, action selection, update, and terminal handling.
-- [ ] Test the update on a tiny toy environment with known rewards.
-- [ ] Compare with Stage 2 baselines using the same simulator.
-- [ ] Log training reward separately from financial metrics; inspect action frequencies and trades.
+- [x] Pin down observation/action/reward/execution timing.
+- [x] Include prior position if it is needed to calculate costs and preserve the Markov state.
+- [x] Confirm no future return or feature appears in an observation.
+- [x] Specify observation bounds, data types, scaling, reset, seed, termination, and final-position behavior.
+- [x] Implement a small tabular Q-learning agent directly in Python/NumPy: exploration, action selection, update, and terminal handling.
+- [x] Test the update on a tiny toy environment with known rewards.
+- [x] Compare with Stage 2 baselines using the same simulator.
+- [x] Log training reward separately from financial metrics; inspect action frequencies and trades.
 
 ## Risk/reward experiment
 
 After return-only Q-learning works:
 
-- [ ] Confirm or revise Stage 1's 20-session ex ante volatility proxy and start with \(\lambda\in\{0,0.5,1,2\}\); use validation data for selection.
-- [ ] Ensure transaction cost enters the accounting/reward path exactly once.
-- [ ] Compare Sharpe, maximum drawdown, CAGR, profit factor, Calmar, turnover, and costs.
-- [ ] Look for reward hacking, inactivity, or excessive position churn.
+- [x] Confirm or revise Stage 1's 20-session ex ante volatility proxy and start with \(\lambda\in\{0,0.5,1,2\}\); use validation data for selection.
+- [x] Ensure transaction cost enters the accounting/reward path exactly once.
+- [x] Compare Sharpe, maximum drawdown, CAGR, profit factor, Calmar, turnover, and costs.
+- [x] Look for reward hacking, inactivity, or excessive position churn.
 
 ## Deliverables
 
@@ -50,3 +54,38 @@ After return-only Q-learning works:
 ## Optional tool
 
 Use Gymnasium if a standard environment API helps. It is not necessary to hide the core Q-learning update behind a deep-RL framework.
+
+## Implemented defaults
+
+- Python/NumPy Q table,3840 states ×5 actions; fixed bins, no fitted scaler.
+-100 episodes/model; alpha0.1, gamma0.99, epsilon1→0.05 with decay0.97; seed42+episode index.
+- Frozen-table exploratory rollout, then chronological off-policy Q updates on reconciled transitions. Terminal updates omit bootstrap.
+- Train through2020; validation2021–2022; lambda0/0.5/1/2 ranked by finite greedy validation Sharpe. Reserved RL test is not evaluated.
+- Full Stage2 execution/accounting engine; discrete-action adapter with reset/rollout; no separate simulator or Gymnasium dependency.
+- NPZ models/visits; training CSV; greedy train/validation transitions and financial reports; diagnostics and selection manifest; FinPlot viewer.
+
+## Acceptance evidence
+
+- Toy Bellman and terminal-bandit tests, simulator parity and terminal fees.
+- Changing validation/test prices cannot change trained Q; evaluation does not update visits.
+- Two full AAPL trainings produce identical Q/visits/logs/validation summaries; restored-model evaluation gives identical equity.
+- Selected lambda2 has only one validation trade and99.8% flat decisions; report records inactivity and sparse-sample metrics explicitly.
+- Sharpe-selected validation model is a prototype checkpoint, not a test result. Stage4 remains pending.
+
+## Small commits
+
+| # | Commit | Checkpoint |
+|---|---|---|
+| 01 | `c198277` | docs: define tabular learning and validation protocol |
+| 02 | `9db972f` | feat: configure tabular learning experiments |
+| 03 | `3592d31` | feat: discretize causal portfolio observations |
+| 04 | `da8b90e` | feat: implement tabular q learning updates |
+| 05 | `2b3a5b2` | feat: expose finalized trading trajectories |
+| 06 | `ab59722` | feat: train and validate risk reward policies |
+| 07 | `1ded7f2` | feat: persist learning models and diagnostics |
+| 08 | `8a86c4d` | feat: expose tabular training command |
+| 09 | `9be22b1` | test: guard learning boundaries and output reuse |
+| 10 | `f72f0a0` | feat: view selected policy against baselines |
+| 11 | `e668671` | test: handle inactive validation policies explicitly |
+| 12 | `e9ceb64` | docs: explain q learning results and inactivity |
+| 13 | This documentation checkpoint | docs: mark basic RL complete |

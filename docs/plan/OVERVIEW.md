@@ -29,7 +29,7 @@ Learn reinforcement learning through a small, transparent stock-trading simulati
 - **Reward:** confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\); Stage 2 implements the lagged sample-volatility proxy, gross return and cost fractions.
 - **Episode:** a contiguous historical segment with explicit start/end behavior.
 
-Accounting, timing and baseline metrics are implemented. State discretization and Q-learning remain Stage 3 work.
+Accounting, timing and baseline metrics are implemented. Stage 3 implements fixed discretization and NumPy Q-learning using finalized episode replay. Stage 4 remains pending.
 
 ## Metrics
 
@@ -82,8 +82,7 @@ Tabular Q-learning for Stage 3 needs only Python and NumPy; it does not need PyT
 
 ## Open decisions
 
-- Tabular state bins, Q-learning hyperparameters and training protocol (Stage 3).
-- Chronological train/validation/test boundaries and validation-only parameter selection (Stage 4).
+- Stage 4 evaluation and robustness protocol for the reserved RL test period. Stage 3 prototype boundaries and settings are already in `configs/stage-3.toml`; retain these before evaluating the test period.
 - Point-in-time US100 membership source and reconstitution schedule for the optional universe extension.
 
 Resolve only what the current stage needs. A successful learning project does not need RL to outperform the market; it needs a correct, fair, and interpretable experiment.
@@ -91,3 +90,7 @@ Resolve only what the current stage needs. A successful learning project does no
 ## Stage 2 accounting contract
 
 Targets are post-fee equity fractions; holdings/cash and actual traded notional determine P&L and costs. HoldPosition preserves units. Short exposure may drift beyond the target bounds; insolvency closes the position. See `docs/stage-1-assumptions.md` for the revised contract.
+
+## Stage 3 checkpoint
+
+Fixed state bins, five discrete targets and episode replay Q-learning are implemented. Train through2020, validation2021–2022, RL test from2023 reserved. Lambda2 is selected by validation Sharpe but its single-trade/near-flat behavior is documented in `docs/stage-3-learning.md`.
