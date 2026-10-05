@@ -1,0 +1,15 @@
+# Stage 3 — tabular Q-learning contract
+
+- State: lagged adjusted-close returns (1/5/20), causal asset volatility, current signed exposure and account drawdown. Six float64 features map into fixed, documented bins; no fitted scaler. Raw account/market data remains the Stage 2 Observation.
+- Actions: target exposures [-1,-0.5,0,0.5,1]. Holdings/cash, fills, fees, synthetic adjusted prices, risk proxy and final liquidation use the existing simulator unchanged.
+- Transition: one historical adjusted-open interval. Episodes reset flat at $100,000; natural segment end/insolvency terminates. No artificial time limit or truncation is introduced in this version.
+- Reward: gross portfolio return - lambda*risk - actual fees/equity_before. Terminal liquidation is included. Financial metrics exclude the risk penalty.
+- Discount gamma=0.99; learning rate alpha=0.1. Q starts at zero. Epsilon starts at1, decays per training episode by0.97, floor0.05. Evaluation is greedy; ties prefer flat, then smaller absolute exposure, then long. Unvisited states therefore choose flat.
+- Learning schedule: generate an exploratory episode with a frozen Q table, then make one chronological Q-learning pass through its finalized transitions. This is off-policy episode replay, not an in-step online update. It preserves the simulator's reconciled last reward, including the rare closing-fee insolvency correction. Every terminal update omits bootstrapping.
+- Fixed bins: return1 [-.02,0,.02], return5 [-.05,0,.05], return20 [-.1,0,.1], volatility [.01,.02,.04], exposure [-.75,-.25,.25,.75], drawdown [.1,.25]. searchsorted(side='right'), with under/overflow bins. 3840 states ×5 actions.
+- Binning/history summaries make this an approximate state representation, not proof of a Markov stock market. Dates/index are not learned features. Positive-price returns exceed -1, volatility is nonnegative, exposure can drift outside target bounds, and live drawdown lies in [0,1). Reject nonfinite observations.
+- Prototype protocol: train through2020-12-31, validation2021-01-01 through2022-12-31. Data from2023-01-01 onward is reserved for Stage4 and is not evaluated. Validation receives only prior historical warm-up; starts with a fresh flat account.
+- Experiments: lambda [0,0.5,1,2],100 training episodes, seed42. Hold other settings constant. Rank only greedy validation Sharpe; undefined/insolvent results cannot win. Stable ties choose the earlier lambda. If all are undefined, explicitly retain lambda0 with an undefined-selection status.
+- Log exploratory training rewards separately from greedy train/validation metrics. Persist Q tables, state/action visits, epsilon curve, action frequencies, transitions and accounting artifacts. Do not require RL to outperform baselines to complete this learning stage.
+
+Environment interface is episode-based: reset(seed) and rollout(policy) return finalized (state, action, reward, next_state, terminated) transitions plus the unchanged SimulationResult. Gymnasium/step API is deferred until useful; a second accounting engine is not introduced.
