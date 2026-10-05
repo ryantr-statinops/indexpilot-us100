@@ -11,6 +11,14 @@ import polars as pl
 def load_chart_series(run_dir: str | Path):
     root = Path(run_dir)
     manifest = json.loads((root / 'run_manifest.json').read_text())
+    if manifest.get('artifact_type') == 'indexpilot-stage-3':
+        index = manifest['selection']['selected_index']
+        if type(index) is not int or not 0 <= index < len(manifest['experiments']):
+            raise ValueError('Invalid selected model index')
+        directory = manifest['experiments'][index]['model_directory']
+        if not directory or not all(ch.isalnum() or ch in '_-' for ch in directory):
+            raise ValueError('Unsafe model directory')
+        return load_chart_series(root / directory / 'validation')
     if manifest.get('artifact_type') != 'indexpilot-stage-2':
         raise ValueError('Expected a Stage 2 run manifest')
     series = []
@@ -40,7 +48,7 @@ def create_chart(series):
         raise RuntimeError('Install chart dependencies with: uv sync --extra dev --extra charts') from error
     fplt.legend_text_color = '#222222'
     fplt.legend_fill_color = '#ffffffe6'
-    axes = fplt.create_plot('Stage 2 — baseline equity and drawdown (%)', rows=2, maximize=False)
+    axes = fplt.create_plot('Policy comparison — equity and drawdown (%)', rows=2, maximize=False)
     axes[0].setLabel('left', 'Equity', units='USD')
     axes[1].setLabel('left', 'Drawdown', units='%')
     for number, item in enumerate(series):

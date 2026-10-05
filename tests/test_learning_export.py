@@ -34,3 +34,13 @@ def test_destination_is_checked_before_training(tmp_path):
     assert (foreign/'important').read_text()=='keep'
     with pytest.raises(ValueError,match='contain input'):
         validate_learning_destination(tmp_path/'protected'/'source.parquet',tmp_path/'protected',True)
+
+
+def test_selected_model_chart_adapter(tmp_path):
+    from indexpilot_us100.evaluation.chart import load_chart_series
+    experiments,selection=run_experiments(synthetic_market(),SimulationConfig(),config())
+    source=tmp_path/'source.parquet'; pl.DataFrame({'x':[1]}).write_parquet(source)
+    export_learning(experiments,selection,SimulationConfig(),config(),source,tmp_path/'run')
+    series=load_chart_series(tmp_path/'run')
+    assert len(series)==7
+    assert series[-1]['name']==experiments[selection['selected_index']].agent.name
