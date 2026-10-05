@@ -9,9 +9,9 @@ Learn the RL loop on the verified simulator with a compact, discrete-action, one
 Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 
 - **State/observation:** lagged market features plus position/portfolio variables needed for the next decision.
-- **Action:** a few discrete target exposures. Include short/flat/long only if shorting is actually modeled.
+- **Action:** discrete target exposures \(\{-1,-0.5,0,0.5,1\}\) as set in Stage 1; short exposure uses the documented simplified return model.
 - **Transition:** advance one historical step and update accounting.
-- **Reward:** use the confirmed form \(R_t=r_{p,t}-\lambda\sigma_t-c_t\). Define the risk measure/window and penalty units before training; transaction costs must enter exactly once. Run a return-only reference as an ablation so the effect of \(\lambda\sigma_t\) can be interpreted.
+- **Reward:** use \(R_t=r_{p,t}-\lambda\sigma_t-c_t\) with Stage 1's provisional 20-session risk proxy and turnover cost. Run a return-only reference (\(\lambda=0\)) and compare with a predeclared \(\lambda\) grid. Keep the risk penalty out of account equity and charge transaction cost exactly once.
 - **Discount:** record \(\gamma\) and explain its role for finite episodes.
 - **Episode:** contiguous training segment; distinguish natural data end from an artificial time limit.
 
@@ -30,8 +30,7 @@ Write down \(\mathcal{M}=(S,A,P,R,\gamma)\):
 
 After return-only Q-learning works:
 
-- [ ] Choose and document what \(\sigma_t\) means (for example, rolling volatility or a drawdown-based measure), its lookback/timing, and its scale.
-- [ ] Add the confirmed risk penalty using a small predeclared range for \(\lambda\), including \(\lambda=0\) as a return-only reference.
+- [ ] Confirm or revise Stage 1's 20-session ex ante volatility proxy and start with \(\lambda\in\{0,0.5,1,2\}\); use validation data for selection.
 - [ ] Ensure transaction cost enters the accounting/reward path exactly once.
 - [ ] Compare Sharpe, maximum drawdown, CAGR, profit factor, Calmar, turnover, and costs.
 - [ ] Look for reward hacking, inactivity, or excessive position churn.
