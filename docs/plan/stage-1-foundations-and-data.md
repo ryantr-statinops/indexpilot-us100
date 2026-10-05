@@ -8,30 +8,32 @@ Define a small experiment and prepare historical data whose timing and meaning a
 
 ### Define the task
 
-- [ ] State the learning/research question in one sentence.
+- [x] State the learning/research question in one sentence; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
 - [ ] Recover and record the exact decision formula mentioned in the project discussion; it is not included in the notes available here.
-- [ ] Define action \(a_t\in[-1,1]\): target capital exposure, share quantity, or another quantity.
+- [ ] Confirm the proposed interpretation of action \(a_t\in[-1,1]\) as signed target notional exposure; see [`../stage-1-assumptions.md`](../stage-1-assumptions.md).
 - [ ] Specify whether shorting/leverage is allowed and set position limits. For a first run, long-only is a simpler option.
-- [ ] Choose one ticker, date range, and decision frequency.
+- [x] Choose one ticker, date range, and decision frequency for the data prototype: AAPL, daily, requested from 2015-01-01.
 - [ ] Set the timing: observation → decision → execution price → holding interval → reward.
 - [ ] Define initial capital, cash behavior, and episode boundaries.
 
 ### Prepare data
 
-- [ ] Select a provider and record retrieval date, terms/access limits, ticker, fields, date range, and timezone.
-- [ ] Save the raw snapshot separately from processed data and record a simple manifest/checksum.
-- [ ] Choose adjusted-price conventions; handle splits/dividends consistently.
-- [ ] Inspect duplicates, missing values, non-trading days, invalid prices, and corporate actions.
-- [ ] Compute simple or log returns consistently and verify a few values by hand.
+- [x] Select a prototype provider and record retrieval date, ticker, fields, date range, and daily session-date semantics. Review provider terms before redistribution or other use.
+- [x] Save a normalized source snapshot separately from processed data and record a manifest/checksum.
+- [x] Choose an adjusted-price convention for return features; corporate actions are saved, while OHLC remain unadjusted and are not yet used for P&L.
+- [x] Inspect duplicate dates, null values, non-trading-day handling, invalid prices, and corporate-action fields.
+- [x] Compute adjusted-close simple/log returns and verify a sample by hand.
 - [ ] Ensure every feature at time \(t\) uses only information available by \(t\).
 - [ ] If scaling features, fit scaling parameters on training data only.
-- [ ] Keep credentials out of Git and avoid committing bulky/licensed data by default.
+- [x] Keep credentials out of Git and downloaded data local/ignored by default.
 
 ## Deliverables
 
-- A short assumptions note with action and event timing.
+- A short assumptions note with current data conventions and unresolved action/execution timing.
 - A repeatable data-load/download procedure and data manifest.
 - A small exploratory notebook or script covering prices, returns, missing data, and basic statistics.
+
+The `indexpilot-inspect` command is the Stage 1 exploratory script; see [`../stage-1-data-profile.md`](../stage-1-data-profile.md) for the current snapshot summary.
 
 ## Done when
 
