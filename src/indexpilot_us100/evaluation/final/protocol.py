@@ -15,6 +15,7 @@ from .config import EvaluationConfig
 from .preparation import prepare_models
 from .source import validate_source
 from .windows import build_test_segment
+from .types import FrozenProtocol,EnvironmentRecord
 
 CORE_PACKAGES=('indexpilot-us100','numpy','polars','pandas','statsmodels','yfinance')
 
@@ -23,7 +24,7 @@ def digest(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
 
 
-def environment():
+def environment() -> EnvironmentRecord:
     versions={}
     for name in (*CORE_PACKAGES,'pytest','finplot','PyQt6','pyqtgraph'):
         try: versions[name]=version(name)
@@ -70,7 +71,7 @@ def assert_preparation_inputs(data,expected_hash,source_hashes):
             raise ValueError('Source artifact changed during preparation: '+path.name)
 
 
-def prepare_protocol(input_path,source_run,config,output_dir,progress=None):
+def prepare_protocol(input_path,source_run,config: EvaluationConfig,output_dir,progress=None) -> FrozenProtocol:
     output=Path(output_dir).resolve(); data=Path(input_path).resolve()
     source_root=Path(source_run).resolve()
     if output.exists(): raise ValueError('Preparation output already exists; choose a new protocol directory')
@@ -107,7 +108,7 @@ def prepare_protocol(input_path,source_run,config,output_dir,progress=None):
     return protocol
 
 
-def validate_protocol(root,input_path=None):
+def validate_protocol(root,input_path=None) -> FrozenProtocol:
     root=Path(root)
     protocol=json.loads((root/'protocol.json').read_text())
     identifier=protocol.get('protocol_id'); payload={key:value for key,value in protocol.items() if key!='protocol_id'}

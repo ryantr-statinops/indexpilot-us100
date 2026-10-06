@@ -9,6 +9,8 @@ from ..export import export_results,file_hash,write_json
 from ..learning_export import trajectory_records
 from .protocol import frozen_path
 from .diagnostics import policy_diagnostics
+from .runner import EvaluatedRun
+from .types import FrozenProtocol,ScoreRow
 
 TRANSITION_SCHEMA={'state':pl.Int64,'action':pl.Int64,'reward':pl.Float64,'next_state':pl.Int64,'terminated':pl.Boolean,'date':pl.Date,'end_date':pl.Date}
 
@@ -18,14 +20,14 @@ def artifact_hashes(root):
     return {str(path.relative_to(root)):file_hash(path) for path in sorted(root.rglob('*')) if path.is_file() and path.name!='completion.json'}
 
 
-def check_run(directory,protocol_id):
+def check_run(directory,protocol_id: str) -> ScoreRow:
     root=Path(directory); marker=json.loads((root/'completion.json').read_text())
     if marker['protocol_id']!=protocol_id or marker['hashes']!=artifact_hashes(root):
         raise ValueError('Scenario artifact integrity failed')
     return json.loads((root/'score.json').read_text())
 
 
-def score_row(run,protocol):
+def score_row(run: EvaluatedRun,protocol: FrozenProtocol) -> ScoreRow:
     row=compute_metrics(run.result).row()
     config=protocol['evaluation_config']; scenario=run.scenario
     coverage=protocol['intended_coverage']
@@ -33,7 +35,7 @@ def score_row(run,protocol):
     return {**row,**scenario,'role':role,'intended_start_date':coverage['start_date'],'intended_end_date':coverage['end_date'],'intended_interval_count':coverage['interval_count']}
 
 
-def store_run(root,protocol,run):
+def store_run(root,protocol: FrozenProtocol,run: EvaluatedRun) -> ScoreRow:
     runs=Path(root)/'runs'; runs.mkdir(exist_ok=True)
     target=frozen_path(root,'runs/'+run.scenario['scenario_id'])
     if target.exists(): return check_run(target,protocol['protocol_id'])
