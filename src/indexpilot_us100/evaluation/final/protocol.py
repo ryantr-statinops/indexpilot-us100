@@ -47,26 +47,62 @@ def frozen_path(root,relative):
     return path
 
 
+def capture_source_inputs(root,config):
+    """Capture provenance before validation or any long-running training."""
+    manifest_path=root/'run_manifest.json'
+    manifest_bytes=manifest_path.read_bytes()
+    manifest=json.loads(manifest_bytes)
+    hashes={manifest_path:hashlib.sha256(manifest_bytes).hexdigest(),root/'selection.json':file_hash(root/'selection.json')}
+    for experiment in manifest['experiments']:
+        if experiment['risk_lambda'] in (config.primary_lambda,config.reference_lambda):
+            directory=experiment['model_directory']
+            for name in ('model.npz','training.csv'):
+                path=frozen_path(root,directory+'/'+name)
+                hashes[path]=file_hash(path)
+    return manifest['input_sha256'],hashes
+
+
+def assert_preparation_inputs(data,expected_hash,source_hashes):
+    if file_hash(data)!=expected_hash:
+        raise ValueError('Data changed during preparation')
+    for path,expected in source_hashes.items():
+        if file_hash(path)!=expected:
+            raise ValueError('Source artifact changed during preparation: '+path.name)
+
+
 def prepare_protocol(input_path,source_run,config,output_dir,progress=None):
     output=Path(output_dir).resolve(); data=Path(input_path).resolve()
     source_root=Path(source_run).resolve()
     if output.exists(): raise ValueError('Preparation output already exists; choose a new protocol directory')
     if output==data or output in data.parents or output==source_root or output in source_root.parents:
         raise ValueError('Preparation output cannot contain source data/artifacts')
+    expected_hash,source_hashes=capture_source_inputs(source_root,config)
     source=validate_source(data,source_root,config)
+    assert_preparation_inputs(data,expected_hash,source_hashes)
     market=load_market_data(data)
+    assert_preparation_inputs(data,expected_hash,source_hashes)
     segment=build_test_segment(market,config,source.simulation)
     first=decision_indices(segment,source.simulation.risk_window).start
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.prepare-',dir=output.parent) as temporary:
         root=Path(temporary)
         models=prepare_models(market,source,config,root,progress)
+        assert_preparation_inputs(data,expected_hash,source_hashes)
         shutil.copy2(source_root/'run_manifest.json',root/'preparation/source_manifest.json')
         shutil.copy2(source_root/'selection.json',root/'preparation/source_selection.json')
-        protocol=dict(artifact_type='indexpilot-stage-4-protocol',schema_version=1,created_at=datetime.now(timezone.utc).isoformat(),input_file=str(data),input_sha256=file_hash(data),source_manifest_sha256=file_hash(root/'preparation/source_manifest.json'),source_selection_sha256=file_hash(root/'preparation/source_selection.json'),evaluation_config=asdict(config),simulation_config=asdict(source.simulation),learning_config=asdict(source.learning),state_definition=dict(features=FEATURE_NAMES,bin_edges=BIN_EDGES,state_count=STATE_COUNT,actions=ACTIONS),models=models,intended_coverage=dict(start_date=segment.dates[first].isoformat(),end_date=segment.dates[-1].isoformat(),interval_count=len(segment.dates)-1-first),environment=environment(),code_fingerprints=code_fingerprints(),lock_sha256=lock_hash(),git_revision=git_revision())
+        for original,relative in ((source_root/'run_manifest.json','preparation/source_manifest.json'),(source_root/'selection.json','preparation/source_selection.json')):
+            if file_hash(root/relative)!=source_hashes[original]:
+                raise ValueError('Source copy changed during preparation')
+        for model in models:
+            if model['reused_stage3']:
+                original=source.models[model['risk_lambda']]
+                if model['sha256']!=source_hashes[original] or model['training_log_sha256']!=source_hashes[original.parent/'training.csv']:
+                    raise ValueError('Checkpoint copy changed during preparation')
+        protocol=dict(artifact_type='indexpilot-stage-4-protocol',schema_version=1,created_at=datetime.now(timezone.utc).isoformat(),input_file=str(data),input_sha256=expected_hash,source_manifest_sha256=file_hash(root/'preparation/source_manifest.json'),source_selection_sha256=file_hash(root/'preparation/source_selection.json'),evaluation_config=asdict(config),simulation_config=asdict(source.simulation),learning_config=asdict(source.learning),state_definition=dict(features=FEATURE_NAMES,bin_edges=BIN_EDGES,state_count=STATE_COUNT,actions=ACTIONS),models=models,intended_coverage=dict(start_date=segment.dates[first].isoformat(),end_date=segment.dates[-1].isoformat(),interval_count=len(segment.dates)-1-first),environment=environment(),code_fingerprints=code_fingerprints(),lock_sha256=lock_hash(),git_revision=git_revision())
         protocol=json.loads(json.dumps(protocol,allow_nan=False))
         protocol['protocol_id']=digest(protocol)
         write_json(root/'protocol.json',protocol)
+        assert_preparation_inputs(data,expected_hash,source_hashes)
         shutil.move(str(root),str(output))
     return protocol
 

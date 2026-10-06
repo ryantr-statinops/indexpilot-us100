@@ -15,3 +15,38 @@ def test_freeze_and_tampering(tmp_path):
     model=root/protocol['models'][0]['model']
     with model.open('ab') as file:file.write(b'changed')
     with pytest.raises(ValueError,match='model'): validate_protocol(root)
+
+
+@pytest.mark.parametrize('when',['load','models'])
+def test_changed_dataset_aborts_preparation(tmp_path,monkeypatch,when):
+    data,source,config=source_fixture(tmp_path)
+    from indexpilot_us100.evaluation.final import protocol as module
+    function='load_market_data' if when=='load' else 'prepare_models'
+    original=getattr(module,function)
+    def changed(*args,**kwargs):
+        result=original(*args,**kwargs)
+        with data.open('ab') as file: file.write(b'changed')
+        return result
+    monkeypatch.setattr(module,function,changed)
+    output=tmp_path/'frozen'
+    with pytest.raises(ValueError,match='Data changed'):
+        prepare_protocol(data,source,replace(config,seeds=(42,)),output)
+    assert not output.exists()
+    assert not list(tmp_path.glob('.prepare-*'))
+
+
+@pytest.mark.parametrize('name',['run_manifest.json','selection.json','lambda_2/model.npz','lambda_2/training.csv'])
+def test_changed_source_aborts_publication(tmp_path,monkeypatch,name):
+    data,source,config=source_fixture(tmp_path)
+    from indexpilot_us100.evaluation.final import protocol as module
+    original=module.prepare_models
+    def changed(*args,**kwargs):
+        result=original(*args,**kwargs)
+        with (source/name).open('ab') as file: file.write(b'changed')
+        return result
+    monkeypatch.setattr(module,'prepare_models',changed)
+    output=tmp_path/'frozen'
+    with pytest.raises(ValueError,match='Source artifact changed'):
+        prepare_protocol(data,source,replace(config,seeds=(42,)),output)
+    assert not output.exists()
+    assert not list(tmp_path.glob('.prepare-*'))
