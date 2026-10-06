@@ -44,13 +44,11 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
         if not date_candidates:
             raise ValueError(f"Could not identify a date column in {data.columns!r}.")
         data = data.rename({date_candidates[0]: "date"})
-    required = {"open", "high", "low", "close", "volume"}
+    required = {"open", "high", "low", "close", "adj_close", "volume"}
     missing = sorted(required.difference(data.columns))
     if missing:
         raise ValueError(f"Downloaded data is missing required columns: {missing}.")
 
-    if "adj_close" not in data.columns:
-        data = data.with_columns(pl.col("close").alias("adj_close"))
     for optional in ("dividends", "stock_splits", "capital_gains"):
         if optional not in data.columns:
             data = data.with_columns(pl.lit(0.0).alias(optional))
