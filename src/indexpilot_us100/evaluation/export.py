@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 from importlib.metadata import version
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -36,6 +37,28 @@ def git_revision():
 
 def write_json(path: Path, value):
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+
+
+def write_json_atomic(path: Path, value):
+    """Publish a complete JSON file, preserving the destination on failure."""
+    path = Path(path)
+    content = json.dumps(value, indent=2, allow_nan=False) + '\n'
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', prefix='.' + path.name + '-', suffix='.tmp', dir=path.parent, delete=False) as file:
+            temporary = Path(file.name)
+            file.write(content)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def export_results(results: list[SimulationResult], input_path: str | Path, output_dir: str | Path, overwrite=False):

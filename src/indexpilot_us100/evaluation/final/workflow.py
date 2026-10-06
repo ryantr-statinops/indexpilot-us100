@@ -6,7 +6,7 @@ import tempfile
 import polars as pl
 from indexpilot_us100.portfolio.market import load_market_data
 from indexpilot_us100.portfolio.config import SimulationConfig
-from ..export import file_hash,write_json,git_revision
+from ..export import file_hash,write_json,write_json_atomic,git_revision
 from .aggregation import aggregate_seed_results
 from .artifacts import check_run,store_run,write_table
 from .comparison import paired_comparison
@@ -15,7 +15,7 @@ from .history import ExperimentLedger,run_lock
 from .matrix import scenarios,evaluate_scenario
 from .protocol import validate_protocol,environment,frozen_path
 from .windows import build_test_segment
-from .yearly import yearly_summary
+from .yearly import yearly_summary,expected_yearly_coverage
 
 SUMMARY_FILES=('primary_summary.csv','primary_summary.json','scenario_summary.csv','scenario_summary.json','seed_summary.csv','seed_summary.json','paired_comparison.csv','paired_comparison.json','yearly_summary.csv','yearly_summary.json','diagnostics.json')
 
@@ -45,7 +45,7 @@ def check_complete(root,protocol):
     return manifest
 
 
-def summarize(root,protocol,scores):
+def summarize(root,protocol,scores,expected_years):
     root=Path(root);config=protocol['evaluation_config']
     primary=[row for row in scores if row['seed']==config['primary_seed'] and row['cost_bps']==config['primary_cost_bps']]
     write_table(root,'scenario_summary',scores)
@@ -61,11 +61,11 @@ def summarize(root,protocol,scores):
         decisions=pl.read_parquet(directory/'decisions.parquet').to_dicts()
         events=[event for event in pl.read_parquet(accounting/'ledger.parquet').to_dicts() if event['kind'] in ('execution','hold')]
         trades=pl.read_parquet(accounting/'trades.parquet').to_dicts()
-        years+=yearly_summary(row,intervals,decisions,events,trades,protocol)
+        years+=yearly_summary(row,intervals,decisions,events,trades,protocol,expected_years)
     write_table(root,'yearly_summary',years)
     write_json(root/'diagnostics.json',diagnostics)
     manifest=dict(artifact_type='indexpilot-stage-4',schema_version=1,protocol_id=protocol['protocol_id'],created_at=datetime.now(timezone.utc).isoformat(),git_revision=git_revision(),environment=environment(),input_sha256=protocol['input_sha256'],effective_input_file=protocol['input_file'],intended_coverage=protocol['intended_coverage'],scenarios=scores,summary_hashes={name:file_hash(root/name) for name in SUMMARY_FILES})
-    write_json(root/'run_manifest.json',manifest)
+    write_json_atomic(root/'run_manifest.json',manifest)
     return manifest
 
 
@@ -73,7 +73,11 @@ def run_evaluation(protocol_dir,input_path=None,progress=None):
     root=Path(protocol_dir);protocol=validate_protocol(root,input_path)
     history=ledger_for(root)
     with run_lock(root):
-        if (root/'run_manifest.json').exists(): return check_complete(root,protocol)
+        if (root/'run_manifest.json').exists():
+            manifest=check_complete(root,protocol)
+            if not any(event['event']=='completed' and event['protocol_id']==protocol['protocol_id'] for event in history.events()):
+                history.append('completed',protocol['protocol_id'],recovered=True,scenarios=[row['scenario_id'] for row in manifest['scenarios']],summary_hashes=manifest['summary_hashes'])
+            return manifest
         completed=[]
         history.append('started',protocol['protocol_id'],input_sha256=protocol['input_sha256'],model_hashes=[row['sha256'] for row in protocol['models']])
         try:
@@ -88,7 +92,7 @@ def run_evaluation(protocol_dir,input_path=None,progress=None):
                 scores.append(score);completed.append(scenario['scenario_id'])
                 if progress: progress(scenario['scenario_id'])
             validate_protocol(root,input_path)
-            manifest=summarize(root,protocol,scores)
+            manifest=summarize(root,protocol,scores,expected_yearly_coverage(segment,SimulationConfig(**protocol['simulation_config'])))
             check_complete(root,protocol)
             history.append('completed',protocol['protocol_id'],scenarios=completed,summary_hashes=manifest['summary_hashes'])
             return manifest
@@ -123,7 +127,7 @@ def verify_evaluation(protocol_dir,input_path=None,progress=None):
             for scenario in scenarios(protocol):
                 scores.append(store_run(replay,protocol,evaluate_scenario(root,protocol,segment,scenario)))
                 if progress: progress(scenario['scenario_id'])
-            summarize(replay,protocol,scores)
+            summarize(replay,protocol,scores,expected_yearly_coverage(segment,SimulationConfig(**protocol['simulation_config'])))
             compare_replay(root,replay,protocol)
             validate_protocol(root,input_path)
             write_json(replay/'verification.json',dict(protocol_id=protocol['protocol_id'],status='verified',scenario_count=len(scores)))
