@@ -63,6 +63,8 @@ uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
 | verify | Tính lại trong verification directory riêng; đối chiếu số liệu/decisions/artifacts |
 | report | Đọc artifacts đã kiểm tra, sinh report.md; không evaluate hoặc train |
 
+Prepare khóa expected data hash từ source đã validate, kiểm tra trước/sau load và trước publication. Source manifest, selection, primary checkpoints và training logs cũng được đối chiếu để phát hiện thay đổi giữa quá trình train/copy. Input đổi thì abort và cleanup temporary output, không publish protocol.
+
 Prepare kiểm tra boundaries và warm-up để khóa intended coverage; chưa rollout trên test. Warm-up lấy thêm max(20,risk_window)+1 dòng trước phiên đầu đủ điều kiện. Không đưa warm-up vào equity curve, không mang vị thế từ validation sang test. Kết thúc tại open cuối; phí liquidation dùng cơ chế interval cuối của simulator.
 
 Sensitivity **giữ nguyên Q table**, không bắt buộc cùng actions. Ví dụ phí cao hơn làm equity/drawdown đi sang một state bin khác; cùng Q có thể chọn action khác.
@@ -71,9 +73,11 @@ Sensitivity **giữ nguyên Q table**, không bắt buộc cùng actions. Ví d�
 
 Protocol khóa dataset/source/checkpoint/training-log hashes, cấu hình thực tế, bins/actions, Python/core package versions, uv.lock, Git revision và fingerprints các modules Python của package.
 
-Thay docs không đổi calculation fingerprint. Thay logic Python hoặc lock sẽ bị phát hiện. Numerical runtime phải khớp Python/core packages; platform và optional GUI versions được ghi provenance.
+Thay docs không đổi calculation fingerprint. Hardening/refactor Python đã thay fingerprint: protocol AAPL cũ giữ nguyên, replay bằng revision b6c550d trong checkout riêng. Trên main, run/verify dùng protocol mới được chuẩn bị bằng code main; không sửa hashes cũ để bỏ qua kiểm tra. Thay logic Python hoặc lock sẽ bị phát hiện. Numerical runtime phải khớp Python/core packages; platform và optional GUI versions được ghi provenance.
 
 Run bị gián đoạn: chạy lại cùng lệnh. Scenarios đã hoàn tất được kiểm tra hash trước khi tái dùng; chỉ scenarios thiếu mới được tính.
+
+Completed manifest được ghi vào temporary file cùng directory, flush/fsync rồi replace atomic. Crash trước publication không để lại manifest JSON bị cắt; resume reuse scenarios đã hoàn tất và tạo lại summaries. Nếu manifest đã publish nhưng completed ledger event chưa ghi, lần chạy sau kiểm tra manifest và bổ sung event recovered.
 
 Run hoàn tất: lệnh run kiểm tra summaries, scenario artifacts và protocol, rồi trả kết quả đã lưu. File bị sửa không bị âm thầm ghi đè. Không tự download snapshot hoặc thay checkpoint để vượt lỗi.
 
@@ -109,6 +113,8 @@ Ví dụ target 0 có thể được đặt khi exposure trước quyết địn
 Seed summaries báo mean/median/sample std/min/max của finite values, kèm số finite/undefined/infinite/not applicable/insolvent. Dưới hai finite values thì std là N/A. Không thay infinity bằng số lớn hoặc bỏ thất bại khỏi báo cáo.
 
 Paired comparison lấy lambda 2 − lambda 0 **cùng seed và cost**. Không gộp equity năm seeds thành portfolio. Seed variability đo ngẫu nhiên của việc học trên cùng lịch sử, không phải confidence interval về tương lai thị trường.
+
+Yearly summaries ghi expected_start_date/expected_end_date theo từng năm, lấy từ eligible intervals của test segment trước khi policy chạy. partial_year phản ánh horizon năm chưa đủ hoặc actual coverage không đạt các boundaries dự kiến; run insolvent trong tháng 12 vẫn được nhận diện. Đây không phải xác minh completeness của exchange calendar.
 
 Yearly summaries giữ **một episode liên tục**. Returns compound theo end_date của interval; fees theo cùng intervals; trades đóng được đếm riêng. Không lấy trade P&L để tính calendar return vì trade có thể qua năm. Insolvent giữ actual coverage và debt, không thêm returns giả đến cuối horizon.
 

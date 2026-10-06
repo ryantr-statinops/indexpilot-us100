@@ -25,7 +25,7 @@ Test **2023-01-03 → 2026-10-02**, 940 khoảng open-to-open; vốn đầu $100
 
 Model chính gần như luôn flat; drawdown nhỏ đi cùng exposure rất thấp. Kết quả này chưa chứng minh RL vượt baseline hoặc có khả năng dự báo tốt. Xem [kết quả và diễn giải](docs/07-results.md) để đọc thêm validation, seeds và cost sensitivity.
 
-Bộ kiểm chứng đã pass **175 tests**. Experiment gồm **10 models, 60 scenarios**, với đối soát tài khoản/trade P&L, Q/visits bất biến khi đánh giá và independent replay trong checkout/môi trường sạch.
+Bộ kiểm chứng đã pass **191 tests**. Experiment gồm **10 models, 60 scenarios**, với đối soát tài khoản/trade P&L, Q/visits bất biến khi đánh giá và independent replay trong checkout/môi trường sạch.
 
 ## Quickstart
 
@@ -44,7 +44,7 @@ uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
 
 Data, checkpoints và detailed outputs không có trong Git clone. Archive local của experiment là `outputs/stage-4/aapl-reproduction.tar.gz`; cần chuyển bản archive riêng để restore. Report/chart đọc kết quả đã lưu, không train hoặc đánh giá lại policies.
 
-Để recompute và đối chiếu, restore thêm exact snapshot/models rồi chạy:
+Để recompute experiment AAPL đã công bố, dùng **checkout riêng tại revision b6c550d**, restore exact snapshot/models theo hướng dẫn tái lập rồi chạy lệnh dưới đây trong checkout đó. Code main đã được harden và có fingerprint khác; report/chart vẫn đọc artifacts cũ.
 
 ```bash
 uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet

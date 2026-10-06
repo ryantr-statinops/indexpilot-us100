@@ -47,7 +47,7 @@ uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
 
 Report được ghi vào outputs/stage-4/aapl-frozen/report.md; chart mở equity/drawdown của tám policies chính. Hai lệnh này đọc kết quả đã lưu.
 
-Kiểm tra cached run hoặc thực sự recompute:
+Để run/verify **experiment AAPL cũ**, dùng checkout riêng tại b6c550d theo hướng dẫn tái lập. Main đã harden/refactor Python và có calculation fingerprint khác; report/chart ở main vẫn đọc được saved results. Các lệnh dưới đây chạy trong checkout của revision đã khóa:
 
 ```bash
 uv run indexpilot-evaluate run \

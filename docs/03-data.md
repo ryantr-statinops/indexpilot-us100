@@ -19,6 +19,8 @@ Pipeline lấy AAPL daily qua yfinance với `auto_adjust=False` và corporate a
 | Processed Parquet | Bảng có kiểu dữ liệu rõ ràng, bổ sung adjusted open và returns |
 | Data manifest JSON | Parameters, retrieval time, row/date coverage, quality checks, phiên bản và SHA256 |
 
+Processing bắt buộc có adjusted close; thiếu cột adj_close sẽ báo lỗi thay vì tự dùng raw close. Corporate-action columns optional vẫn được bổ sung 0 khi nguồn không cung cấp.
+
 Raw CSV là bảng normalize, không phải archive byte-for-byte của HTTP response. OHLC nguồn vẫn chưa điều chỉnh; simulator dùng các cột adjusted riêng.
 
 yfinance là đường truy cập không chính thức. Archive của dự án được giữ local; tham khảo [ghi chú sử dụng yfinance](https://github.com/ranaroussi/yfinance#download-market-data-from-yahoo-finances-api) và [điều khoản dữ liệu Yahoo](https://uk.help.yahoo.com/kb/exchanges-data-providers-yahoo-finance-sln2310.html) trước khi chia sẻ dữ liệu.

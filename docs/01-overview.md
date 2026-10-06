@@ -47,7 +47,7 @@ Mô hình short chưa có borrow fee, financing, margin call; phí giao dịch l
 | Adapter dữ liệu | pandas tại biên yfinance và chart; không thay Polars ở core |
 | Biểu đồ | FinPlot, Qt/PyQt6; optional extra charts |
 | Đóng gói | uv, pyproject.toml và uv.lock |
-| Kiểm chứng | pytest; suite đã kiểm chứng có 175 tests |
+| Kiểm chứng | pytest; suite hiện tại có 191 tests |
 
 Agent hiện tại không cần PyTorch hoặc Gymnasium. Environment dùng episode API riêng; statsmodels không được dùng để chọn actions hoặc train Q.
 

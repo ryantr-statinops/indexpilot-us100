@@ -45,8 +45,9 @@ Archive nằm trên máy đã chạy experiment, không được tải cùng Git
 Ví dụ với archive được đặt ở một đường dẫn riêng trên máy:
 
 ```bash
-git clone https://github.com/ryantr-statinops/indexpilot-us100.git
-cd indexpilot-us100
+git clone https://github.com/ryantr-statinops/indexpilot-us100.git indexpilot-us100-frozen
+cd indexpilot-us100-frozen
+git checkout --detach b6c550d
 uv sync --python 3.11.16 --frozen --extra dev --extra charts
 
 sha256sum /absolute/path/aapl-reproduction.tar.gz
@@ -59,7 +60,9 @@ tar -xzf /absolute/path/aapl-reproduction.tar.gz \
 
 Thay đường dẫn archive bằng file thực tế. Các members được trích là inputs/artifacts của experiment. Chạy trong checkout mới để không đè lên experiment local khác.
 
-Code revision khi khóa là b6c550d. Revision sau đó chỉ sửa docs vẫn hợp lệ vì fingerprint các modules Python và lock không đổi. Nếu repository đã có logic mới, dùng checkout/revision khớp protocol và đọc tài liệu này từ revision hiện tại.
+Code revision khi khóa là b6c550d. Main hiện đã có hardening và refactor Python, nên exact run/verify của archive cũ cần checkout này. Giữ protocol/model/data hashes nguyên trạng; không cập nhật fingerprint cũ để vượt lỗi. Đọc tài liệu hiện tại từ main, và chạy các lệnh replay trong checkout frozen riêng. Report/chart đọc artifacts cũ được cả trên main.
+
+Revision chỉ đổi docs vẫn tương thích; thay code kể cả formatting/types/report helpers bị phát hiện vì fingerprint bao gồm toàn package Python.
 
 ## Replay và verify
 
@@ -85,7 +88,7 @@ Có thể chạy tests fixture độc lập với snapshot/Yahoo:
 uv run pytest -q
 ```
 
-Bản experiment đã được kiểm chứng với 175 tests và independent 60-scenario replay trong clean venv.
+Experiment AAPL tại revision đã khóa có 175 tests và independent 60-scenario replay trong clean venv. Suite main sau hardening có 191 tests; fixtures kiểm tra adjusted-close requirement, thay input giữa preparation, atomic manifest/recovery, December insolvency coverage và report composition. Matrix tổng hợp trước/sau refactor giữ nguyên summaries, accounting tables và Q/visits; generated report giữ output byte-identical. AAPL đã được verify lại 60/60 ở checkout b6c550d riêng sau hardening.
 
 ## Sinh report và PNG từ artifacts
 
@@ -118,7 +121,7 @@ print(pl.read_csv(f"{root}/paired_comparison.csv"))
 
 ## Chuẩn bị lại từ source
 
-Nếu cần tạo inventory mới từ exact snapshot/source learning run, chọn output directory khác và ghi reason sau một completed test:
+Để tạo protocol mới bằng hardening, dùng **checkout main riêng**, restore exact snapshot/source learning run và ledger, chọn output directory khác và ghi reason sau một completed test. Các lệnh ở phần này chạy trên main:
 
 ```bash
 uv run indexpilot-evaluate prepare \
@@ -140,7 +143,7 @@ Raw CSV cũng có thể reprocess để học pipeline, nhưng exact reproductio
 | Thiếu Parquet/models/artifacts sau clone | Restore đúng archived inputs; đọc prerequisites trước khi chạy |
 | Data hash changed | Tìm đúng snapshot có hash đã ghi; đổi đường dẫn bằng --data nếu bytes đúng |
 | Model/log/source hash changed | Restore bản archive nguyên vẹn, đối chiếu archive manifest |
-| Code hoặc dependency lock changed | Dùng revision và uv.lock tương thích; docs-only changes hợp lệ |
+| Code hoặc dependency lock changed | Archive AAPL cũ dùng b6c550d; main hardening cần protocol mới, không sửa fingerprint cũ |
 | Numerical runtime differs | Tạo venv riêng bằng Python 3.11.16 và frozen lock |
 | Output prepare đã tồn tại | Dùng thư mục mới; run/verify dùng protocol đã có |
 | New protocol requires reason | Cung cấp lý do cụ thể, giữ lịch sử ledger; không chọn lại theo test |
@@ -148,6 +151,8 @@ Raw CSV cũng có thể reprocess để học pipeline, nhưng exact reproductio
 | Scenario/summary integrity failed | Giữ bản lỗi để audit, restore outputs đúng hash |
 | Chart thiếu FinPlot/display | Cài extra charts; dùng desktop hoặc QT_QPA_PLATFORM=offscreen cho PNG |
 | Insufficient warm-up/no interval | Kiểm tra boundary và số phiên lịch sử; không fill giá để vượt lỗi |
+
+Evaluator dùng fcntl cho locking; runtime được kiểm chứng là Linux. Windows support chưa được triển khai.
 
 Backups local nên giữ exact snapshot, source, frozen inventory, detailed results và ledger cùng nhau. Report/CSV giúp đọc kết quả; chúng không thay thế checkpoints và snapshot cho recomputation.
 
