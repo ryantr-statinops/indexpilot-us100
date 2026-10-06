@@ -1,13 +1,14 @@
 """Static contracts for existing evaluation dictionaries; no wire conversion."""
+
 from datetime import date
 from typing import Any, Literal, NotRequired, TypedDict
 
-MetricStatus = Literal['finite', 'undefined', 'positive_infinity', 'not_applicable']
-RunStatus = Literal['completed', 'insolvent']
+MetricStatus = Literal["finite", "undefined", "positive_infinity", "not_applicable"]
+RunStatus = Literal["completed", "insolvent"]
 
 
 class Scenario(TypedDict):
-    kind: Literal['rl', 'random', 'deterministic']
+    kind: Literal["rl", "random", "deterministic"]
     policy: str
     seed: int
     risk_lambda: float
@@ -54,7 +55,7 @@ class EnvironmentRecord(TypedDict):
 
 class ScoreRow(Scenario, total=False):
     baseline: str
-    role: Literal['primary', 'reference', 'baseline']
+    role: Literal["primary", "reference", "baseline"]
     status: RunStatus
     start_date: str
     end_date: str
