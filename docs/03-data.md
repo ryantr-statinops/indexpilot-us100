@@ -1,33 +1,33 @@
-# 03 — Dữ liệu và snapshot
+# 03 — Data and Snapshots
 
-## Mục lục
+## Contents
 
-- [Nguồn và định dạng lưu](#nguồn-và-định-dạng-lưu)
-- [Giá điều chỉnh và returns](#giá-điều-chỉnh-và-returns)
-- [Snapshot của experiment](#snapshot-của-experiment)
-- [Chất lượng và causal features](#chất-lượng-và-causal-features)
-- [Splits và warm-up](#splits-và-warm-up)
-- [Download và xử lý lại](#download-và-xử-lý-lại)
+- [Source and saved formats](#source-and-saved-formats)
+- [Adjusted prices and returns](#adjusted-prices-and-returns)
+- [Experiment snapshot](#experiment-snapshot)
+- [Quality checks and causal features](#quality-checks-and-causal-features)
+- [Splits and warm-up](#splits-and-warm-up)
+- [Download and reprocess](#download-and-reprocess)
 
-## Nguồn và định dạng lưu
+## Source and saved formats
 
-Pipeline lấy AAPL daily qua yfinance với `auto_adjust=False` và corporate actions bật. pandas nhận kết quả từ provider; dữ liệu sau đó được chuẩn hóa sang Polars.
+The pipeline fetches daily AAPL data through yfinance with `auto_adjust=False` and corporate actions enabled. pandas receives the provider response; the data is then normalized into Polars.
 
-| Artifact local | Vai trò |
+| Local artifact | Purpose |
 |---|---|
-| Raw CSV | Snapshot bảng nguồn đã normalize: OHLC, adjusted close, volume và các corporate actions có sẵn |
-| Processed Parquet | Bảng có kiểu dữ liệu rõ ràng, bổ sung adjusted open và returns |
-| Data manifest JSON | Parameters, retrieval time, row/date coverage, quality checks, phiên bản và SHA256 |
+| Raw CSV | Normalized snapshot table with OHLC, adjusted close, volume, and available corporate actions |
+| Processed Parquet | Typed table with derived adjusted open and returns |
+| Data manifest JSON | Parameters, retrieval time, row/date coverage, quality checks, versions, and SHA256 hashes |
 
-Processing bắt buộc có adjusted close; thiếu cột adj_close sẽ báo lỗi thay vì tự dùng raw close. Corporate-action columns optional vẫn được bổ sung 0 khi nguồn không cung cấp.
+Processing requires adjusted close; it raises an error if `adj_close` is missing instead of silently using raw close. Optional corporate-action columns are added with value 0 when the source does not provide them.
 
-Raw CSV là bảng normalize, không phải archive byte-for-byte của HTTP response. OHLC nguồn vẫn chưa điều chỉnh; simulator dùng các cột adjusted riêng.
+The raw CSV is a normalized table, not a byte-for-byte archive of the HTTP response. Source OHLC prices remain unadjusted; the simulator uses separate adjusted columns.
 
-yfinance là đường truy cập không chính thức. Archive của dự án được giữ local; tham khảo [ghi chú sử dụng yfinance](https://github.com/ranaroussi/yfinance#download-market-data-from-yahoo-finances-api) và [điều khoản dữ liệu Yahoo](https://uk.help.yahoo.com/kb/exchanges-data-providers-yahoo-finance-sln2310.html) trước khi chia sẻ dữ liệu.
+yfinance is an unofficial access route. The project archive is stored locally. See the [yfinance usage notes](https://github.com/ranaroussi/yfinance#download-market-data-from-yahoo-finances-api) and [Yahoo data terms](https://uk.help.yahoo.com/kb/exchanges-data-providers-yahoo-finance-sln2310.html) before sharing data.
 
-## Giá điều chỉnh và returns
+## Adjusted prices and returns
 
-Với mỗi dòng:
+For each row:
 
 ```text
 factor = adj_close / close
@@ -37,31 +37,31 @@ log_return[i] = log(adj_close[i] / adj_close[i-1])
 open_to_open_return[i] = adj_open[i] / adj_open[i-1] - 1
 ```
 
-Synthetic adjusted open áp dụng hệ số adjusted-close lên open. Nó là giá của chuỗi kế toán điều chỉnh, không phải một historical fill thực tế. Holdings của simulator là **đơn vị tổng hợp** trên chuỗi đó; không cộng dividend hoặc split thêm lần nữa.
+Synthetic adjusted open applies the adjusted-close factor to open. It is a price on an adjusted accounting series, not an actual historical fill. The simulator's holdings are **synthetic units** on that series; dividends or splits are not added a second time.
 
-Ví dụ từ snapshot:
+Example from the snapshot:
 
 ```text
-adj_open ngày 2015-01-02 = 24,6271994096
-adj_open ngày 2015-01-05 = 23,9418205485
-return = 23,9418205485 / 24,6271994096 - 1
-       ≈ −2,7830%
+adj_open on 2015-01-02 = 24.6271994096
+adj_open on 2015-01-05 = 23.9418205485
+return = 23.9418205485 / 24.6271994096 - 1
+       ≈ -2.7830%
 ```
 
-Return lưu tại dòng i mô tả **open i−1 → open i**. Outcome của action tại open i phải dùng **open i → open i+1**. Simulator tính P&L trực tiếp từ hai giá đã dùng; không tin cột return có sẵn để thực hiện kế toán.
+The return stored at row i describes **open i−1 to open i**. The outcome of an action taken at open i must use **open i to open i+1**. The simulator calculates P&L directly from the two prices it uses; it does not rely on the stored return column for accounting.
 
-## Snapshot của experiment
+## Experiment snapshot
 
-| Thuộc tính | Giá trị đã lưu |
+| Property | Saved value |
 |---|---|
 | Ticker / interval | AAPL / 1d |
-| Request | 2015-01-01 inclusive → 2026-10-06 exclusive |
-| Coverage thực tế | 2015-01-02 → 2026-10-02 |
-| Rows | 2.955 |
-| Returns open-to-open | 2.954, dòng đầu null |
+| Request | 2015-01-01 inclusive to 2026-10-06 exclusive |
+| Actual coverage | 2015-01-02 to 2026-10-02 |
+| Rows | 2,955 |
+| Open-to-open returns | 2,954; first row is null |
 | Duplicate dates | 0 |
-| Null hoặc non-positive price rows | 0 |
-| Retrieval | 2026-10-05, khoảng 05:01 UTC |
+| Rows with null or non-positive prices | 0 |
+| Retrieved | 2026-10-05, around 05:01 UTC |
 | Provider adapter | yfinance 0.2.66 |
 
 Processed file:
@@ -72,57 +72,58 @@ SHA256:
 042605225d9f9dc91ac983ceb13079f09077a569bd485dd06774263f994db3cc
 ```
 
-Tên file ghi request end, không phải ngày giao dịch cuối. Experiment kết thúc tại open 2026-10-02; không bao gồm return open-to-close của ngày đó. Năm 2026 chưa đủ.
+The filename records the requested end date, not the last trading date. The experiment ends at the 2026-10-02 open; it does not include that day's open-to-close return. 2026 is a partial year.
 
-Provider có thể sửa historical adjustments. Fresh download cùng ticker/date range vẫn có thể khác hash, nên không thay thế exact snapshot trong một protocol đã khóa.
+The provider may revise historical adjustments. A fresh download for the same ticker and date range can have a different hash, so it cannot replace the exact snapshot in a locked protocol.
 
-## Chất lượng và causal features
+## Quality checks and causal features
 
-Market loader yêu cầu `date`, `adj_open`, `adj_close`; dates phải là daily Date, duy nhất và tăng nghiêm ngặt. Giá phải finite, lớn hơn 0 và không null. Loader không tự sort, fill giá, tạo phiên hoặc fallback về raw open.
+The market loader requires `date`, `adj_open`, and `adj_close`; dates must be daily Date values, unique, and strictly increasing. Prices must be finite, positive, and non-null. The loader does not sort data, fill prices, create sessions, or fall back to raw open.
 
-Weekend/holiday tự nhiên không phải lỗi. Gaps lớn hơn bốn ngày lịch được cảnh báo; dự án chưa dùng exchange calendar để chứng minh đủ mọi phiên.
+Weekends and market holidays are expected. Gaps longer than four calendar days produce a warning; the project does not use an exchange calendar to prove that every session is present.
 
-Tại quyết định ở dòng i:
+At the decision on row i:
 
-| Feature | Dữ liệu được dùng |
+| Feature | Data used |
 |---|---|
-| Return 1/5/20 phiên | Adjusted closes kết thúc tại i−1 |
-| Prior close / SMA20 | Close i−1 / mean của 20 closes trước i |
-| Risk volatility | Sample std, ddof=1, của 20 open returns kết thúc trước open i |
-| Account state | Cash, holdings, equity, exposure, drawdown mark bằng quote open i |
+| 1/5/20-session returns | Adjusted closes ending at i−1 |
+| Prior close / SMA20 | Close at i−1 / mean of the 20 closes before i |
+| Risk volatility | Sample standard deviation, ddof=1, of 20 open returns ending before open i |
+| Account state | Cash, holdings, equity, exposure, and drawdown marked at quote open i |
 
-Open i được dùng định giá tài khoản; open i+1 không nằm trong observation. Các bins của agent được cố định, không fit scaler trên validation hoặc test.
+Open i is used to mark the account; open i+1 is not in the observation. The agent's bins are fixed and are not fit on validation or test data.
 
-Lệnh inspect dùng statsmodels ADF cho open returns. Trong snapshot, sample mean khoảng 0,00105685 và std khoảng 0,01868915; ADF statistic khoảng −33,822680. Diagnostic này không chứng minh returns dự báo được. P-value hiển thị 0 do underflow số thực không có nghĩa p-value toán học bằng 0.
+The inspect command runs a statsmodels ADF test on open returns. In this snapshot, the sample mean is about 0.00105685 and the standard deviation is about 0.01868915; the ADF statistic is about −33.822680. This diagnostic does not establish that returns are predictable. A displayed p-value of 0 due to floating-point underflow does not mean the mathematical p-value is exactly zero.
 
-## Splits và warm-up
+## Splits and warm-up
 
-| Segment | Boundary đã khai báo | Coverage được đánh giá |
+| Segment | Declared boundary | Evaluated coverage |
 |---|---|---|
-| Training | Đến 2020-12-31 | 2015-02-03 → 2020-12-31; 1.489 intervals |
-| Validation | 2021-01-01 → 2022-12-31 | 2021-01-04 → 2022-12-30; 502 intervals |
-| Test | 2023-01-01 → 2026-10-02 | 2023-01-03 → 2026-10-02; 940 intervals |
+| Training | Through 2020-12-31 | 2015-02-03 to 2020-12-31; 1,489 intervals |
+| Validation | 2021-01-01 to 2022-12-31 | 2021-01-04 to 2022-12-30; 502 intervals |
+| Test | 2023-01-01 to 2026-10-02 | 2023-01-03 to 2026-10-02; 940 intervals |
 
-Risk window mặc định 20. Cần `max(20, risk_window)+1` dòng trước quyết định đầu; với window 20, index đầu là 21 và cần ít nhất 23 rows để có một holding interval.
+The default risk window is 20. The first eligible decision needs `max(20, risk_window)+1` preceding rows; with a 20-session window, index 21 is the first decision and at least 23 rows are needed for one holding interval.
 
-Validation/test dùng lịch sử trước boundary làm warm-up, nhưng các phiên đó không thuộc equity curve hoặc metrics. Tài khoản mỗi segment reset flat/$100.000; không mang holdings từ training hoặc validation sang test.
+Validation and test use history before their boundary for warm-up, but those sessions are not included in the equity curve or metrics. Each segment's account resets to flat with $100,000; holdings are not carried from training or validation into the test.
 
-## Download và xử lý lại
+## Download and reprocess
 
-Ví dụ lấy **snapshot mới**, lưu vào thư mục riêng để không thay archived input:
+Example of fetching a **new snapshot** into a separate directory so the archived input is not replaced:
 
 ```bash
 uv run indexpilot-fetch --ticker AAPL --start 2015-01-01 --end 2026-10-06 --output-dir data/new-snapshot
 uv run indexpilot-inspect data/new-snapshot/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
-Mặc định end của downloader là ngày UTC hiện tại, exclusive. Với raw CSV đã archive:
+The downloader's default end is the current UTC date, exclusive. To reprocess an archived raw CSV:
 
 ```bash
 uv run indexpilot-process data/raw/aapl_daily_2015-01-01_to_2026-10-06_raw.csv --output data/reprocessed/aapl.parquet
 ```
 
-Xử lý lại không cần Yahoo/network. File Parquet mới cần kiểm tra hash nếu định dùng cho exact reproduction; không mặc nhiên coi cùng nội dung bảng là cùng bytes.
+Reprocessing does not need Yahoo or network access. Check the Parquet hash if you intend to use it for exact reproduction; do not assume that an equivalent table has identical bytes.
 
-Liên quan: [phạm vi và kiến trúc](01-overview.md).
-**Đọc tiếp:** [README dự án](../README.md) dẫn tới các chương về simulator và tái lập.
+Related: [scope and architecture](01-overview.md).
+
+**Next:** the [project README](../README.md) links to the simulator and reproduction chapters.
