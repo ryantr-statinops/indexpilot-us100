@@ -73,3 +73,16 @@ def test_report_replay_commands_use_actual_paths(tmp_path):
     assert seed_command[seed_command.index("--risk-lambda") + 1] == "0.5"
     assert "aapl" not in text.lower()
     assert "prepare --data" not in text
+
+
+def test_report_outlook_is_single_asset(tmp_path):
+    from indexpilot_us100.evaluation.final.report import load_report_context, reproduction_section
+    data, source, config = source_fixture(tmp_path)
+    root = tmp_path / "outlook"
+    prepare_protocol(data, source, replace(config, seeds=(42,), costs_bps=(10.,)), root)
+    run_evaluation(root)
+    text = reproduction_section(load_report_context(root))
+    assert "Future single-asset research" in text
+    assert "walk-forward" in text
+    assert "multi-asset" not in text
+    assert "historical US100 universe" not in text
