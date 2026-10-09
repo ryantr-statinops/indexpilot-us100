@@ -33,3 +33,18 @@ def test_download_cli_ticker_selection(tmp_path, monkeypatch, arguments, ticker)
     monkeypatch.setattr(download, "download_daily", fetch)
     assert download.main([*arguments, "--start", "2015-01-01", "--end", "2026-10-06", "--output-dir", str(tmp_path)]) == 0
     assert calls == [(ticker, "2015-01-01", "2026-10-06", tmp_path)]
+
+
+def test_download_manifest_describes_single_asset_snapshot(tmp_path, monkeypatch):
+    import json
+    from indexpilot_us100.data import download
+    monkeypatch.setattr(download.yf, "download", lambda **kwargs: object())
+    monkeypatch.setattr(download, "normalize_download", lambda frame: process_source_table(source()))
+    paths = download.download_daily("QQQ", "2020-01-01", "2020-01-04", tmp_path)
+    manifest = json.loads(paths["manifest"].read_text())
+    assert manifest["ticker"] == "QQQ"
+    assert "Yahoo Finance" in manifest["provider"]
+    assert "single-asset" in manifest["caveat"]
+    assert "constituent" not in manifest["caveat"]
+    assert "Adj Close / Close" in manifest["price_convention"]
+    assert set(manifest["files"]) == {paths["raw"].name, paths["processed"].name}

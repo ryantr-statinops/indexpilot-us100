@@ -168,7 +168,7 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         },
         "caveat": (
             "yfinance is an unofficial access route to Yahoo Finance data. This snapshot is for "
-            "research/education, is not an official point-in-time US100 constituent history, "
+            "single-asset research/education using synthetic adjusted prices, "
             "and should not be treated as live-trading data."
         ),
     }
