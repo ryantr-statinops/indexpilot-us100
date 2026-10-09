@@ -64,6 +64,10 @@ class ReportContext:
         return self.protocol["evaluation_config"]
 
     @property
+    def instrument_label(self) -> str:
+        return self.config.get("instrument_label") or "Single-asset experiment"
+
+    @property
     def coverage(self) -> Coverage:
         return self.protocol["intended_coverage"]
 
@@ -107,9 +111,9 @@ def load_report_context(root: Path) -> ReportContext:
 
 
 def research_section(context: ReportContext) -> str:
-    return """## 1. Câu hỏi nghiên cứu và phạm vi
+    return f"""## 1. Research question and scope
 
-Đánh giá Q-learning đã chọn bằng validation trên test dành riêng; mô tả độ ổn định theo seed và chi phí, cùng khả năng tái lập. Đây là prototype một tài sản AAPL; chưa phải kết luận cho US100."""
+Evaluate the Q-learning policy selected by validation on a held-out test, including seed/cost variability and reproducibility. Instrument: {context.instrument_label}. This is a single-asset simulation using synthetic adjusted prices, not an actual historical broker execution."""
 
 
 def data_section(context: ReportContext) -> str:
@@ -313,7 +317,7 @@ def generate_report(run_dir: str | Path, output_path: str | Path | None = None) 
     root = Path(run_dir)
     context = load_report_context(root)
     sections = [
-        "# Báo cáo hoàn thiện prototype AAPL",
+        f"# Evaluation report: {context.instrument_label}",
         research_section(context),
         data_section(context),
         simulation_section(context),
