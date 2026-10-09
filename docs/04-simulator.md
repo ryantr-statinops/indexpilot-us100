@@ -1,52 +1,52 @@
-# 04 — Simulator, baselines và metrics
+# 04 — Simulator, Baselines, and Metrics
 
-## Mục lục
+## Contents
 
-- [Tài khoản và vị thế](#tài-khoản-và-vị-thế)
-- [Giao dịch và phí](#giao-dịch-và-phí)
-- [Một interval diễn ra thế nào](#một-interval-diễn-ra-thế-nào)
-- [Reward và risk](#reward-và-risk)
-- [Sáu baselines](#sáu-baselines)
-- [Trade và năm metrics](#trade-và-năm-metrics)
-- [Đọc ledger và outputs](#đọc-ledger-và-outputs)
+- [Account and position](#account-and-position)
+- [Trades and fees](#trades-and-fees)
+- [What happens in one interval](#what-happens-in-one-interval)
+- [Reward and risk](#reward-and-risk)
+- [Six baselines](#six-baselines)
+- [Trades and five metrics](#trades-and-five-metrics)
+- [Ledger and outputs](#ledger-and-outputs)
 
-## Tài khoản và vị thế
+## Account and position
 
-Simulator dùng [synthetic adjusted open](03-data.md#giá-điều-chỉnh-và-returns). Với q là holdings, C là cash và P là giá:
+The simulator uses [synthetic adjusted open](03-data.md#adjusted-prices-and-returns). For holdings q, cash C, and price P:
 
 ```text
 position_value = q * P
 equity = C + q * P
-exposure = q * P / equity         # chỉ khi equity > 0
+exposure = q * P / equity         # only when equity > 0
 ```
 
-q dương là long, q âm là short. Float64 và đơn vị lẻ được dùng; chưa có lot rounding, cash interest, financing, borrow fee hoặc margin call.
+Positive q is long; negative q is short. The simulator uses float64 and fractional units; it has no lot rounding, cash interest, financing, borrow fee, or margin call.
 
-Short sale làm cash tăng nhưng không tự sinh lợi nhuận. Ví dụ không phí: vốn $10.000, short 100 units tại $100 tạo cash $20.000 và vị thế −$10.000; equity vẫn $10.000. Giá lên $110 làm equity $9.000, exposure khoảng −122,22%.
+A short sale increases cash but does not create profit by itself. Example without fees: with $10,000 of equity, shorting 100 units at $100 gives $20,000 cash and a −$10,000 position; equity remains $10,000. If the price rises to $110, equity falls to $9,000 and exposure is about −122.22%.
 
-Hai chỉ thị có ý nghĩa khác nhau:
+Two instructions have different meanings:
 
-| Chỉ thị | Hành vi |
+| Instruction | Behavior |
 |---|---|
-| TargetExposure(+0.5) | Đưa signed position value về 50% equity sau phí |
-| TargetExposure(0) | Đóng vị thế |
-| HoldPosition() | Giữ nguyên số units, không tái cân bằng |
+| `TargetExposure(+0.5)` | Set signed position value to 50% of equity after fees |
+| `TargetExposure(0)` | Close the position |
+| `HoldPosition()` | Keep the same number of units without rebalancing |
 
-Target phải finite và nằm trong [−1,1]; giá trị sai bị từ chối, không tự clip. Exposure có thể trôi ngoài khoảng này khi giữ vị thế; không có margin intervention khi equity còn dương.
+Targets must be finite and within [−1, 1]; invalid values are rejected, not clipped. Exposure can drift outside this range while holding; there is no margin intervention while equity remains positive.
 
-Ví dụ long 50% không phí: ban đầu cash $50.000 và 500 units ở $100. Giá lên $110 thì equity $105.000, exposure = $55.000/$105.000 ≈ 52,38%. Hold giữ 500 units; fixed exposure sẽ bán bớt để trở về 50%.
+Example of a 50% long position without fees: start with $50,000 cash and 500 units at $100. If the price rises to $110, equity becomes $105,000 and exposure is $55,000/$105,000 ≈ 52.38%. Hold keeps the 500 units; a fixed-exposure policy sells units to return to 50%.
 
-## Giao dịch và phí
+## Trades and fees
 
-Default config trong [stage-2.toml](../configs/stage-2.toml): vốn $100.000, phí 10 bps, lambda 0, risk window 20, annualization 252, risk-free 0, seed 42.
+The default configuration in [stage-2.toml](../configs/stage-2.toml) uses $100,000 initial equity, 10 bps fees, lambda 0, risk window 20, annualization 252, risk-free rate 0, and seed 42.
 
-10 bps = 0,001 = 0,1% **notional thực sự giao dịch**. Không tính phí trên toàn vốn mỗi phiên; chưa tách spread/slippage.
+10 bps = 0.001 = 0.1% of **actual traded notional**. Fees are not charged on total capital every session; spread/slippage are not modeled separately.
 
-Với E là equity trước lệnh, v = qP là position value hiện tại, a là target và k là cost rate:
+For equity E before an order, current position value v = qP, target a, and cost rate k:
 
 ```text
 x = a * (E - k * abs(x-v))
-s = +1 nếu a*E >= v, ngược lại -1
+s = +1 if a*E >= v, otherwise -1
 x = a * (E + k*s*v) / (1 + a*k*s)
 delta_units = (x-v) / P
 fee = k * abs(x-v)
@@ -55,42 +55,42 @@ cash_after = cash_before - delta_units*P - fee
 equity_after = equity_before - fee
 ```
 
-Như vậy target áp dụng trên equity **sau trả phí**, không phải mua a × vốn trước phí rồi chấp nhận sai tỷ trọng.
+The target is applied to equity **after paying the fee**, rather than buying a × pre-fee capital and accepting an imprecise final weight.
 
-### Ví dụ tính tay
+### Worked example
 
-Từ $100.000 cash, P = $100, target +1, phí 10 bps; sau đó giá lên $110 và đóng:
+Start with $100,000 cash, P = $100, target +1, and a 10 bps fee; then let the price rise to $110 and close:
 
-| Đại lượng | Giá trị gần đúng |
+| Quantity | Approximate value |
 |---|---:|
-| Notional mua | $99.900,099900 |
-| Phí mở | $99,900100 |
-| Holdings | 999,000999 units |
-| Cash sau mở | $0 |
-| Exposure sau phí | 100% |
-| Equity ở $110 trước đóng | $109.890,109890 |
-| Phí đóng | $109,890110 |
-| Equity cuối | $109.780,219780 |
-| Net trade P&L | $9.780,219780 |
+| Purchase notional | $99,900.099900 |
+| Opening fee | $99.900100 |
+| Holdings | 999.000999 units |
+| Cash after opening | $0 |
+| Exposure after fees | 100% |
+| Equity at $110 before closing | $109,890.109890 |
+| Closing fee | $109.890110 |
+| Final equity | $109,780.219780 |
+| Net trade P&L | $9,780.219780 |
 
-Nếu giá đứng yên, gross P&L bằng 0 nhưng equity vẫn giảm bởi phí mở và đóng.
+If the price stays unchanged, gross P&L is zero but equity still falls by the opening and closing fees.
 
-## Một interval diễn ra thế nào
+## What happens in one interval
 
-1. Mark cash/holdings tại open i.
-2. Tạo observation: market features từ lịch sử trước i, account state tại current quote.
-3. Policy chọn target hoặc hold.
-4. Execute tại open i, trả phí, cập nhật cash và holdings.
-5. Giữ holdings đến open i+1; ghi gross P&L.
-6. Tính net return/reward, ghi events và interval.
+1. Mark cash and holdings at open i.
+2. Create an observation with market features from history before i and account state at the current quote.
+3. The policy selects a target or hold instruction.
+4. Execute at open i, charge the fee, and update cash and holdings.
+5. Hold the position until open i+1 and record gross P&L.
+6. Calculate net return/reward and record events and the interval.
 
-Có đủ warm-up mới bắt đầu; mọi policy dùng cùng eligible interval schedule. Không đặt quyết định mới ở open cuối.
+The episode starts after sufficient warm-up; all policies use the same eligible interval schedule. No new decision is made at the final open.
 
-Kết thúc bình thường: liquidate ở open cuối, phí đóng được gộp vào interval cuối. Không thêm một ngày giả để ghi phí.
+At a normal end, the simulator liquidates at the final open and includes the closing fee in the final interval. It does not add a fictitious day to record the fee.
 
-Nếu equity không dương, liquidate tại quote đã quan sát và terminate với status insolvent. Equity âm được giữ nguyên để thấy debt; không tiếp tục chia exposure cho vốn không dương. Trường hợp short drift khiến equity dương nhưng không đủ trả closing fee cũng được đóng và kết thúc; engine điều chỉnh interval trước đã đến quote đó thay vì thêm interval giả.
+If equity is non-positive, the simulator liquidates at the observed quote and terminates with status `insolvent`. Negative equity is retained to show the debt; exposure is no longer divided by non-positive capital. If short drift leaves positive equity but not enough to pay the closing fee, the position is closed and the episode terminates; the engine adjusts the preceding interval that reached that quote instead of adding a fictitious interval.
 
-## Reward và risk
+## Reward and risk
 
 ```text
 gross_return = q_after * (next_price-price) / equity_before
@@ -100,57 +100,57 @@ reward = gross_return - lambda*risk - cost_fraction
 net_return = equity_end/equity_before - 1
 ```
 
-Risk dùng sample volatility của 20 open returns **đã có trước quyết định**. Nó là proxy theo interval, không phải volatility annualized của cả portfolio.
+Risk uses sample volatility of the 20 open returns **available before the decision**. It is a per-interval proxy, not annualized portfolio volatility.
 
-Equity thay đổi bởi gross P&L và phí; risk penalty chỉ ảnh hưởng reward. Không lấy net return rồi trừ phí lần nữa. Với lambda 0, reward bằng net interval return trong sai số số học; tổng reward vẫn không phải compounded return.
+Gross P&L and fees change equity; the risk penalty only affects reward. Do not subtract fees a second time from net return. At lambda 0, reward equals net interval return up to numerical precision; total reward is still not compounded return.
 
-Ví dụ gross return 0,005; cost fraction 0,001; risk 0,01; lambda 2:
+Example: gross return 0.005, cost fraction 0.001, risk 0.01, and lambda 2:
 
 ```text
-net return = 0,005 - 0,001 = 0,004 = +0,4%
-reward = 0,005 - 2*0,01 - 0,001 = -0,016
+net return = 0.005 - 0.001 = 0.004 = +0.4%
+reward = 0.005 - 2*0.01 - 0.001 = -0.016
 ```
 
-Account có lời trong interval nhưng reward âm. Mức penalty này có thể khiến agent ưu tiên flat.
+The account makes money during the interval, but reward is negative. This penalty can make the agent prefer flat positions.
 
-## Sáu baselines
+## Six baselines
 
-| Policy | Quy tắc |
+| Policy | Rule |
 |---|---|
-| cash | Luôn target 0 |
-| buy_hold | Target +1 đầu episode, sau đó HoldPosition |
-| fixed_long_50 | Target +0,5 mỗi phiên |
-| fixed_short_50 | Target −0,5 mỗi phiên |
-| sma20_long_flat | Prior adjusted close > SMA20 trước quyết định thì +1; ngược lại 0 |
-| random_discrete | RNG NumPy chọn −1/−0,5/0/+0,5/+1 |
+| `cash` | Always target 0 |
+| `buy_hold` | Target +1 at the start of the episode, then `HoldPosition()` |
+| `fixed_long_50` | Target +0.5 every session |
+| `fixed_short_50` | Target −0.5 every session |
+| `sma20_long_flat` | If prior adjusted close > SMA20 before the decision, target +1; otherwise 0 |
+| `random_discrete` | NumPy RNG chooses −1/−0.5/0/+0.5/+1 |
 
-SMA20 là quy tắc đã chọn trước, không tối ưu bằng test. Random là sanity check; reset RNG theo seed mỗi episode. Các policies dùng cùng execution engine và liquidation.
+SMA20 is a rule specified in advance, not optimized on the test. Random is a sanity check; its RNG resets from the seed for each episode. All policies use the same execution engine and liquidation logic.
 
-## Trade và năm metrics
+## Trades and five metrics
 
-Một **order** là một lệnh thực sự có traded notional. Một **trade** là một đợt vị thế cùng chiều, từ mở đến flat hoặc reversal. Scale-in/out cùng chiều vẫn thuộc trade đó; reversal đóng trade cũ và mở trade mới, phân bổ fees theo notional đóng/mở.
+An **order** is an instruction that results in traded notional. A **trade** is a same-direction position episode from opening through flat or reversal. Scaling in/out in the same direction remains part of the same trade; a reversal closes the old trade and opens a new one, allocating fees according to closing/opening notional.
 
-| Metric | Định nghĩa |
+| Metric | Definition |
 |---|---|
-| Sharpe | Mean excess net interval return / sample std, ddof=1, nhân sqrt(252); annual risk-free chuyển sang per-session bằng compounding |
-| Maximum drawdown | Max(1 − equity/running peak), báo độ lớn dương trên toàn event ledger |
-| CAGR | (final equity / initial equity)^(365,25 / calendar days) − 1 |
-| Profit Factor | Tổng net P&L trades thắng / abs tổng net P&L trades thua |
+| Sharpe | Mean excess net interval return / sample standard deviation, ddof=1, multiplied by sqrt(252); annual risk-free rate is compounded to a per-session rate |
+| Maximum drawdown | Max(1 − equity/running peak), reported as a positive magnitude over the full event ledger |
+| CAGR | (final equity / initial equity)^(365.25 / calendar days) − 1 |
+| Profit Factor | Total net P&L of winning trades / absolute total net P&L of losing trades |
 | Calmar | CAGR / maximum drawdown |
 
-Phí mở, rebalance và đóng đều thuộc net trade P&L. Sau liquidation, tổng net trade P&L phải khớp equity cuối trừ vốn đầu. Wins/losses/breakeven dùng tolerance $10^-8 để bỏ nhiễu số thực; không sửa account P&L.
+Opening, rebalance, and closing fees all belong to net trade P&L. After liquidation, total net trade P&L must match final equity minus initial capital. Wins/losses/breakeven use a $10^-8 tolerance to ignore floating-point noise; account P&L is not altered.
 
-Các trường hợp đặc biệt:
+Special cases:
 
-- Sharpe thiếu hai returns hoặc std ≤ 10^-14: undefined.
-- PF không trade hoặc toàn hòa vốn: undefined; chỉ thắng: +∞; chỉ thua: 0.
-- Calmar có DD 0 và CAGR dương: +∞; CAGR 0/DD 0: undefined.
-- Insolvent: Sharpe/CAGR/Calmar not applicable; MDD có thể vượt 100%.
-- JSON lưu null và metric_status; không xuất NaN/Infinity số học không hợp lệ.
+- Sharpe with fewer than two returns or standard deviation ≤ 10^-14: undefined.
+- Profit Factor with no trades or only breakeven trades: undefined; only wins: +∞; only losses: 0.
+- Calmar with zero drawdown and positive CAGR: +∞; zero CAGR and zero drawdown: undefined.
+- Insolvent run: Sharpe/CAGR/Calmar are not applicable; MDD may exceed 100%.
+- JSON stores null plus `metric_status`; invalid NaN/Infinity values are not serialized as numeric values.
 
-Normalized turnover cộng notional/equity_before cho các orders có equity_before dương. Lệnh closing khi vốn đã không dương vẫn nằm trong total notional/fees nhưng không có mẫu số hợp lệ cho normalized turnover.
+Normalized turnover sums notional/equity_before for orders with positive equity_before. A closing order executed when equity is non-positive still contributes to total notional/fees, but has no valid denominator for normalized turnover.
 
-## Đọc ledger và outputs
+## Ledger and outputs
 
 ```text
 summary.csv/json
@@ -163,9 +163,9 @@ run_manifest.json
     intervals.parquet
 ```
 
-Ledger có initial, execution/hold, mark và liquidation. Mỗi event thỏa equity = cash + holdings × price. Cash có orders/trades rỗng với schema vẫn đầy đủ.
+The ledger includes initial, execution/hold, mark, and liquidation events. Each event satisfies equity = cash + holdings × price. Cash policies have empty orders/trades tables with complete schemas.
 
-Ví dụ đọc kết quả đã có, không chạy lại policy:
+Example of reading saved results without rerunning the policy:
 
 ```python
 import polars as pl
@@ -175,6 +175,6 @@ print(pl.read_parquet(f"{root}/orders.parquet"))
 print(pl.read_parquet(f"{root}/trades.parquet"))
 ```
 
-MDD trong summary dùng toàn ledger, kể cả đáy ngay sau phí. FinPlot vẽ daily equity snapshots; một đáy sau execution trước khi giá hồi có thể không hiện thành điểm riêng trên chart.
+MDD in the summary uses the full ledger, including troughs immediately after fees. FinPlot draws daily equity snapshots; a trough after execution that recovers before the next snapshot may not appear as a separate point on the chart.
 
-**Đọc tiếp:** [README dự án](../README.md) dẫn tới chương Q-learning và evaluation.
+**Next:** the [project README](../README.md) links to Q-learning and evaluation.
