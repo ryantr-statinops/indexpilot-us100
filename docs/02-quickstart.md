@@ -1,16 +1,16 @@
 # 02 — Quickstart
 
-## Mục lục
+## Contents
 
-- [Cài môi trường](#cài-môi-trường)
-- [Đọc kết quả đã có](#đọc-kết-quả-đã-có)
-- [Xem và kiểm tra experiment đã khóa](#xem-và-kiểm-tra-experiment-đã-khóa)
-- [Học với snapshot mới](#học-với-snapshot-mới)
-- [Tra cứu lệnh](#tra-cứu-lệnh)
+- [Set up the environment](#set-up-the-environment)
+- [Read the existing results](#read-the-existing-results)
+- [View and verify the locked experiment](#view-and-verify-the-locked-experiment)
+- [Learn from a new snapshot](#learn-from-a-new-snapshot)
+- [Command reference](#command-reference)
 
-## Cài môi trường
+## Set up the environment
 
-Cần Git và uv. Mọi lệnh dưới đây chạy từ root repository:
+You need Git and uv. Run all commands below from the repository root:
 
 ```bash
 git clone https://github.com/ryantr-statinops/indexpilot-us100.git
@@ -18,36 +18,36 @@ cd indexpilot-us100
 uv sync --python 3.11.16 --frozen --extra dev
 ```
 
-Để dùng FinPlot:
+To use FinPlot:
 
 ```bash
 uv sync --python 3.11.16 --frozen --extra dev --extra charts
 ```
 
-Python 3.11.16 là numerical runtime của experiment đã khóa. Code project khai báo Python ≥3.11; replay exact kiểm tra runtime chặt hơn.
+Python 3.11.16 is the numerical runtime used by the locked experiment. The project declares Python ≥3.11; exact replay checks the runtime more strictly.
 
-Git clone không có data/checkpoints/results local. Nếu chỉ muốn hiểu dự án, đọc [kết quả](07-results.md) ngay; nếu muốn chạy, chọn workflow phù hợp bên dưới.
+A Git clone does not contain local data, checkpoints, or results. If you only want to understand the project, start with [results](07-results.md); if you want to run it, choose the workflow below.
 
-## Đọc kết quả đã có
+## Read the existing results
 
-Primary lambda 2/seed 42/10 bps trả −0,76%, chỉ active 2/940 intervals. Reference lambda 0 trả −17,42%; buy-and-hold +159,85% trên test 2023-01-03 → 2026-10-02. Năm 2026 chưa đủ.
+The primary model (lambda 2, seed 42, 10 bps) returned −0.76% and was active for only 2/940 intervals. The reference model (lambda 0) returned −17.42%; buy and hold returned +159.85% over the test period 2023-01-03 to 2026-10-02. 2026 is a partial year.
 
-[Kết quả và diễn giải](07-results.md) có metrics, seeds/costs và inactivity. Generated full report và accounting tables nằm local trong outputs/stage-4/aapl-frozen.
+[Results and interpretation](07-results.md) includes metrics, seeds/costs, and activity. The generated full report and accounting tables are stored locally under `outputs/stage-4/aapl-frozen`.
 
-## Xem và kiểm tra experiment đã khóa
+## View and verify the locked experiment
 
-**Prerequisites:** restore archived snapshot, protocol/frozen_models/preparation, saved runs/summaries/manifest và ledger theo [hướng dẫn tái lập](08-reproduction.md#restore-archive-trong-checkout-sạch).
+**Prerequisites:** restore the archived snapshot, protocol, frozen models, preparation, saved runs/summaries/manifest, and ledger using the [archive restoration guide](08-reproduction.md#restore-the-archive-in-a-clean-checkout).
 
-Sau khi restore:
+After restoring:
 
 ```bash
 uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
 uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
 ```
 
-Report được ghi vào outputs/stage-4/aapl-frozen/report.md; chart mở equity/drawdown của tám policies chính. Hai lệnh này đọc kết quả đã lưu.
+The report is written to `outputs/stage-4/aapl-frozen/report.md`; the chart opens equity/drawdown plots for the eight primary policies. These commands read saved results.
 
-Để run/verify **experiment AAPL cũ**, dùng checkout riêng tại b6c550d theo hướng dẫn tái lập. Main đã harden/refactor Python và có calculation fingerprint khác; report/chart ở main vẫn đọc được saved results. Các lệnh dưới đây chạy trong checkout của revision đã khóa:
+To run or verify the **older AAPL experiment**, use a separate checkout at `b6c550d` as explained in the reproduction guide. The current main branch has been hardened/refactored and has a different calculation fingerprint; report and chart commands on main can still read the saved results. Run the following commands in the checkout at the locked revision:
 
 ```bash
 uv run indexpilot-evaluate run \
@@ -59,9 +59,9 @@ uv run indexpilot-evaluate verify \
   --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
-Với completed run, run kiểm tra hashes rồi reuse; verify tính lại riêng để so kết quả. Không chạy prepare vào directory đã restore. Thêm --data giúp máy mới dùng relocated snapshot có đúng hash.
+For a completed run, `run` checks hashes and reuses the saved results; `verify` computes them independently for comparison. Do not run `prepare` in the restored directory. Passing `--data` lets a new machine use a relocated snapshot with the expected hash.
 
-Ví dụ đọc bảng chính:
+For example, read the primary table with:
 
 ```python
 import polars as pl
@@ -70,11 +70,11 @@ summary = pl.read_csv("outputs/stage-4/aapl-frozen/primary_summary.csv")
 print(summary.select("policy", "net_return", "sharpe", "trade_count", "active_intervals"))
 ```
 
-Null metric phải đọc cùng metric_status; report hiển thị N/A hoặc ∞.
+Interpret null metrics together with `metric_status`; the report displays them as N/A or ∞.
 
-## Học với snapshot mới
+## Learn from a new snapshot
 
-Workflow này cần mạng ở bước fetch và tạo **experiment khác**; không thay input của protocol cũ:
+This workflow needs a network connection for the fetch step and creates a **different experiment**; it does not replace the input to the old protocol:
 
 ```bash
 uv run indexpilot-fetch --ticker AAPL --start 2015-01-01 --end 2026-10-06 --output-dir data/demo
@@ -88,9 +88,9 @@ uv run indexpilot-simulate \
 uv run indexpilot-chart --run-dir outputs/baseline-demo
 ```
 
-Simulator xuất summary và bảng equity/ledger/orders/trades/intervals cho sáu baselines. Output directory phải mới; dùng tên khác khi thử tiếp.
+The simulator exports a summary and equity/ledger/orders/trades/interval tables for six baselines. The output directory must be new; use a different name for subsequent attempts.
 
-Muốn quan sát vòng học:
+To observe the learning loop:
 
 ```bash
 uv run indexpilot-train \
@@ -101,13 +101,13 @@ uv run indexpilot-train \
 uv run indexpilot-chart --run-dir outputs/learning-demo
 ```
 
-Training chạy 100 episodes cho mỗi lambda grid và selection bằng validation. Chart learning run mở validation của model được chọn; không phải final test.
+Training runs 100 episodes for each lambda in the grid and selects by validation. A chart of a learning run opens the selected model's validation results; it is not the final test.
 
-Fresh download có thể đổi adjustments/hash, metrics và selected lambda. Prepare final evaluation hiện yêu cầu source selection khớp primary lambda trong config; mismatch sẽ dừng. Để tái lập kết quả đã công bố, dùng archive và exact hashes thay vì sửa config theo kết quả test mới.
+A fresh download can change adjustments/hashes, metrics, and the selected lambda. Final evaluation preparation currently requires the source selection to match the primary lambda in the config; a mismatch stops preparation. To reproduce the published result, use the archive and exact hashes instead of changing the config based on new test results.
 
-Ví dụ một order có target +0,5 nhưng holdings không nhất thiết bằng 500 units: units phụ thuộc price, current account và phí. Xem [simulator](04-simulator.md) để truy kế toán.
+For example, an order can target +0.5 without holdings ending up at 500 units: units depend on price, the current account, and fees. See the [simulator chapter](04-simulator.md) for the accounting details.
 
-## Tra cứu lệnh
+## Command reference
 
 ```bash
 uv run indexpilot-fetch --help
@@ -120,6 +120,6 @@ uv run indexpilot-evaluate prepare --help
 uv run indexpilot-chart --help
 ```
 
-Tham số simulation/learning/evaluation đặt trong các TOML version-controlled, không sửa outputs để thay cấu hình. Tests tổng hợp có thể chạy bằng uv run pytest -q mà không cần Yahoo hoặc market snapshot.
+Simulation, learning, and evaluation parameters are stored in version-controlled TOML files; do not change a run by editing its outputs. Synthetic tests can run with `uv run pytest -q` without Yahoo or a market snapshot.
 
-**Đọc tiếp:** [dữ liệu](03-data.md) để hiểu giá/timing; [tái lập](08-reproduction.md) để restore và xử lý lỗi.
+**Next:** read [data](03-data.md) to understand prices/timing and [reproduction](08-reproduction.md) to restore and troubleshoot the experiment.
