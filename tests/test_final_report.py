@@ -57,9 +57,11 @@ def test_report_replay_commands_use_actual_paths(tmp_path):
     from indexpilot_us100.evaluation.final.report import load_report_context, reproduction_section
     data, source, config = source_fixture(tmp_path)
     root = tmp_path / "QQQ run with spaces"
-    prepare_protocol(data, source, replace(config, primary_cost_bps=20., costs_bps=(20.,), seeds=(42,)), root)
+    prepare_protocol(data, source, replace(config, seeds=(42,), costs_bps=(10.,)), root)
     run_evaluation(root)
-    text = reproduction_section(load_report_context(root))
+    context = load_report_context(root)
+    rendering_protocol = {**context.protocol, "evaluation_config": {**context.config, "primary_cost_bps": 20., "primary_lambda": 0.5}}
+    text = reproduction_section(replace(context, protocol=rendering_protocol))
     commands = [shlex.split(line) for line in text.splitlines() if line.startswith("uv run ")]
     for command in commands:
         key = "--run-dir" if "indexpilot-chart" in command else "--protocol-dir"
@@ -68,5 +70,6 @@ def test_report_replay_commands_use_actual_paths(tmp_path):
             assert command[command.index("--data") + 1] == str(data.resolve())
     seed_command = commands[-1]
     assert seed_command[seed_command.index("--cost-bps") + 1] == "20"
+    assert seed_command[seed_command.index("--risk-lambda") + 1] == "0.5"
     assert "aapl" not in text.lower()
     assert "prepare --data" not in text
