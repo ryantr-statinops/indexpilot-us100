@@ -11,7 +11,7 @@
 
 ## Source and saved formats
 
-The pipeline fetches daily AAPL data through yfinance with `auto_adjust=False` and corporate actions enabled. pandas receives the provider response; the data is then normalized into Polars.
+The pipeline fetches daily QQQ ETF data, a single-asset proxy for the Nasdaq-100, through yfinance with `auto_adjust=False` and corporate actions enabled. pandas receives the provider response; the data is then normalized into Polars.
 
 | Local artifact | Purpose |
 |---|---|
@@ -37,15 +37,15 @@ log_return[i] = log(adj_close[i] / adj_close[i-1])
 open_to_open_return[i] = adj_open[i] / adj_open[i-1] - 1
 ```
 
-Synthetic adjusted open applies the adjusted-close factor to open. It is a price on an adjusted accounting series, not an actual historical fill. The simulator's holdings are **synthetic units** on that series; dividends or splits are not added a second time.
+Synthetic adjusted open applies the adjusted-close factor to open. QQQ is an ETF proxy rather than the index series; its observed performance reflects its own distributions and tracking characteristics. It is a price on an adjusted accounting series, not an actual historical fill. The simulator's holdings are **synthetic units** on that series; dividends or splits are not added a second time.
 
 Example from the snapshot:
 
 ```text
-adj_open on 2015-01-02 = 24.6271994096
-adj_open on 2015-01-05 = 23.9418205485
-return = 23.9418205485 / 24.6271994096 - 1
-       ≈ -2.7830%
+adj_open on 2015-01-02 = 95.2151710699
+adj_open on 2015-01-05 = 94.0497694422
+return = 94.0497694422 / 95.2151710699 - 1
+       ≈ -1.2240%
 ```
 
 The return stored at row i describes **open i−1 to open i**. The outcome of an action taken at open i must use **open i to open i+1**. The simulator calculates P&L directly from the two prices it uses; it does not rely on the stored return column for accounting.
@@ -54,25 +54,25 @@ The return stored at row i describes **open i−1 to open i**. The outcome of an
 
 | Property | Saved value |
 |---|---|
-| Ticker / interval | AAPL / 1d |
+| Ticker / interval | QQQ / 1d |
 | Request | 2015-01-01 inclusive to 2026-10-06 exclusive |
-| Actual coverage | 2015-01-02 to 2026-10-02 |
-| Rows | 2,955 |
-| Open-to-open returns | 2,954; first row is null |
+| Actual coverage | 2015-01-02 to 2026-10-05 |
+| Rows | 2,956 |
+| Open-to-open returns | 2,955; first row is null |
 | Duplicate dates | 0 |
 | Rows with null or non-positive prices | 0 |
-| Retrieved | 2026-10-05, around 05:01 UTC |
+| Retrieved | 2026-10-09, around 07:14 UTC |
 | Provider adapter | yfinance 0.2.66 |
 
 Processed file:
 
 ```text
-data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet
 SHA256:
-042605225d9f9dc91ac983ceb13079f09077a569bd485dd06774263f994db3cc
+4db7a3175dfe288b7a440a2b3cd4996e0322420429fd55feeb3dce8c7d02b9f2
 ```
 
-The filename records the requested end date, not the last trading date. The experiment ends at the 2026-10-02 open; it does not include that day's open-to-close return. 2026 is a partial year.
+The filename records the requested end date, not the last trading date. The final snapshot row (2026-10-05) is outside the frozen test horizon. The experiment ends at the 2026-10-02 open; it does not include that day's open-to-close return. 2026 is a partial year.
 
 The provider may revise historical adjustments. A fresh download for the same ticker and date range can have a different hash, so it cannot replace the exact snapshot in a locked protocol.
 
@@ -93,7 +93,7 @@ At the decision on row i:
 
 Open i is used to mark the account; open i+1 is not in the observation. The agent's bins are fixed and are not fit on validation or test data.
 
-The inspect command runs a statsmodels ADF test on open returns. In this snapshot, the sample mean is about 0.00105685 and the standard deviation is about 0.01868915; the ADF statistic is about −33.822680. This diagnostic does not establish that returns are predictable. A displayed p-value of 0 due to floating-point underflow does not mean the mathematical p-value is exactly zero.
+The inspect command runs a statsmodels ADF test on open returns. In this snapshot, the sample mean is about 0.00079225 and the standard deviation is about 0.01367566; the ADF statistic is about −60.124156. This diagnostic does not establish that returns are predictable. A displayed p-value of 0 due to floating-point underflow does not mean the mathematical p-value is exactly zero.
 
 ## Splits and warm-up
 
@@ -112,17 +112,19 @@ Validation and test use history before their boundary for warm-up, but those ses
 Example of fetching a **new snapshot** into a separate directory so the archived input is not replaced:
 
 ```bash
-uv run indexpilot-fetch --ticker AAPL --start 2015-01-01 --end 2026-10-06 --output-dir data/new-snapshot
-uv run indexpilot-inspect data/new-snapshot/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+uv run indexpilot-fetch --ticker QQQ --start 2015-01-01 --end 2026-10-06 --output-dir data/new-snapshot
+uv run indexpilot-inspect data/new-snapshot/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
 The downloader's default end is the current UTC date, exclusive. To reprocess an archived raw CSV:
 
 ```bash
-uv run indexpilot-process data/raw/aapl_daily_2015-01-01_to_2026-10-06_raw.csv --output data/reprocessed/aapl.parquet
+uv run indexpilot-process data/qqq/qqq_daily_2015-01-01_to_2026-10-06_raw.csv --output data/reprocessed/aapl.parquet
 ```
 
 Reprocessing does not need Yahoo or network access. Check the Parquet hash if you intend to use it for exact reproduction; do not assume that an equivalent table has identical bytes.
+
+The earlier AAPL snapshot and hashes remain part of the historical experiment; they must not be used as QQQ inputs. See [verification evidence](qqq-verification.md) for the QQQ protocol and checked archive.
 
 Related: [scope and architecture](01-overview.md).
 
