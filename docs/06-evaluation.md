@@ -19,7 +19,7 @@ The protocol records the choices and model inventory **before the first test eva
 
 | Item | Decision |
 |---|---|
-| Primary | Lambda 2, seed 42 checkpoint from the learning run |
+| Primary | Lambda 0.5, seed 42 checkpoint from the learning run |
 | Reference | Lambda 0, seed 42 checkpoint |
 | Training / validation | Preserve the segment through 2020 / 2021–2022 |
 | Declared test | 2023-01-01 to 2026-10-02 |
@@ -30,7 +30,7 @@ The protocol records the choices and model inventory **before the first test eva
 | Each run | Reset flat/$100,000; greedy with epsilon 0 |
 | Model updates | Q/visits are read-only; no training during evaluation |
 
-The two seed-42 models are copied byte-for-byte, not retrained on validation. The eight additional models are four seeds × two lambdas; each is trained for 100 episodes on the original training segment, with the same bins/settings. Lambda is not reselected per seed using validation.
+The primary lambda comes from QQQ validation; the predeclared reference rule is 0 for a nonzero primary, or 2 when primary is 0. Here the selected primary is 0.5. The two seed-42 models are copied byte-for-byte, not retrained on validation. The eight additional models are four seeds × two lambdas; each is trained for 100 episodes on the original training segment, with the same bins/settings. Lambda is not reselected per seed using validation.
 
 Scenario matrix:
 
@@ -41,19 +41,21 @@ Scenario matrix:
 | Random: 5 seeds × 3 costs | 15 |
 | Total | 60 |
 
-Each deterministic baseline runs once per cost; it is not replicated as five independent samples. Baseline reward uses lambda 2; its financial accounting uses the same engine. Reward is not used to compare P&L between two lambdas.
+Each deterministic baseline runs once per cost; it is not replicated as five independent samples. Baseline reward uses lambda 0.5; its financial accounting uses the same engine. Reward is not used to compare P&L between two lambdas.
 
 The primary table has eight rows: two RL policies and six baselines at seed 42/10 bps. Other seeds describe variability; they do not replace the primary result.
 
 ## Prepare, run, verify, and report
 
-The commands below use the archived snapshot and existing source learning run. The prepare output directory must be new:
+The QQQ protocol is `16af504702802ec895620d84c64550f5919fbc1933af9151cced8f5c4b8db2dd`, prepared at revision `e2c4cba4f1d51876dad8373d1ffbf41e72050cd0`. Its config is [stage-4-qqq.toml](../configs/stage-4-qqq.toml). The instrument label is saved in the evaluation configuration and used by the report.
+
+For a new preparation from the QQQ source run, choose a new directory and provide a reason. This creates a new protocol; restore the archive to replay the published protocol. The following `run`/`verify`/`report` commands target the published QQQ directory:
 
 ```bash
-uv run indexpilot-evaluate prepare --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet --source-run outputs/stage-3/aapl-default --config configs/stage-4.toml --output-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate run --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate prepare --data data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet --source-run outputs/stage-3/qqq-default --config configs/stage-4-qqq.toml --output-dir outputs/stage-4/qqq-reprepared --reason "Rebuild QQQ inventory from archived training inputs"
+uv run indexpilot-evaluate run --protocol-dir outputs/stage-4/qqq-frozen
+uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/qqq-frozen
+uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/qqq-frozen
 ```
 
 | Command | Work performed |
@@ -73,7 +75,7 @@ Cost sensitivity **keeps the same Q table**, but does not require identical acti
 
 The protocol locks dataset/source/checkpoint/training-log hashes, effective configuration, bins/actions, Python/core package versions, `uv.lock`, Git revision, and fingerprints of the package's Python modules.
 
-Changing docs does not change the calculation fingerprint. Subsequent hardening/refactoring of Python changed the fingerprint: the old AAPL protocol remains unchanged and must be replayed with revision `b6c550d` in a separate checkout. On main, run/verify requires a protocol prepared with the main code; do not edit old hashes to bypass checks. Changes to Python logic or the lockfile are detected. The numerical runtime must match Python/core package versions; platform and optional GUI versions are recorded as provenance.
+Changing docs does not change the calculation fingerprint. Exact QQQ run/verify uses code compatible with revision `e2c4cba`; subsequent Python or lockfile changes require the frozen revision or a new protocol. The historical AAPL protocol remains separate and uses revision `b6c550d`. Do not edit old hashes to bypass checks. The numerical runtime must match Python/core package versions; platform and optional GUI versions are recorded as provenance.
 
 If a run is interrupted, rerun the same command. Completed scenarios are hash-checked before reuse; only missing scenarios are calculated.
 
@@ -86,7 +88,7 @@ The experiment ledger at `outputs/stage-4/experiment-ledger.jsonl` is an append-
 After a test has been completed and recorded in the ledger, preparing a new protocol requires a reason and a new directory, for example:
 
 ```text
---output-dir outputs/stage-4/aapl-new-protocol
+--output-dir outputs/stage-4/qqq-new-protocol
 --reason "Rebuild the inventory in a separate environment"
 ```
 
@@ -112,7 +114,7 @@ For example, target 0 can be chosen when pre-decision exposure is +0.5: this is 
 
 Seed summaries report mean/median/sample standard deviation/min/max of finite values, along with counts for finite/undefined/infinite/not applicable/insolvent. With fewer than two finite values, standard deviation is N/A. Infinity is not replaced with a large number, and failed runs are not omitted.
 
-Paired comparison calculates lambda 2 − lambda 0 **for the same seed and cost**. It does not combine the equity curves from five seeds into a portfolio. Seed variability measures randomness in learning from the same history, not a confidence interval for future market results.
+Paired comparison calculates lambda 0.5 − lambda 0 **for the same seed and cost**. It does not combine the equity curves from five seeds into a portfolio. Seed variability measures randomness in learning from the same history, not a confidence interval for future market results.
 
 Yearly summaries record `expected_start_date`/`expected_end_date` by year, taken from eligible intervals in the test segment before policy execution. `partial_year` indicates an incomplete year horizon or actual coverage that misses expected boundaries; insolvency in December is still detected. This does not verify completeness against an exchange calendar.
 
@@ -154,9 +156,9 @@ Score/manifest files retain intended and actual coverage/status; reward is recor
 FinPlot reads the artifacts and displays equity/drawdown in two panels:
 
 ```bash
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --cost-bps 20
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --seeds --risk-lambda 2 --cost-bps 10
+uv run indexpilot-chart --run-dir outputs/stage-4/qqq-frozen
+uv run indexpilot-chart --run-dir outputs/stage-4/qqq-frozen --cost-bps 20
+uv run indexpilot-chart --run-dir outputs/stage-4/qqq-frozen --seeds --risk-lambda 0.5 --cost-bps 10
 ```
 
 Report/chart commands do not train or reevaluate policies. Detailed outputs are not in Git; interpret results alongside the archived inputs needed for replay.
