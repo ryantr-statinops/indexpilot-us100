@@ -205,7 +205,7 @@ def process_main(argv: list[str] | None = None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ticker", default="AAPL", help="Yahoo Finance ticker (default: AAPL)")
+    parser.add_argument("--ticker", default="QQQ", help="Yahoo Finance ticker (default: QQQ)")
     parser.add_argument("--start", default="2015-01-01", help="Inclusive date, YYYY-MM-DD")
     parser.add_argument(
         "--end",

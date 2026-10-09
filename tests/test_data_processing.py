@@ -21,3 +21,15 @@ def test_split_adjustment_keeps_total_return_prices():
     assert result['open_to_open_return'][1]==0
     assert result['open'].to_list()==[100.,50.]
     assert result['dividends'].to_list()==[0.,0.]
+
+
+@pytest.mark.parametrize("arguments,ticker", [([], "QQQ"), (["--ticker", "AAPL"], "AAPL"), (["--ticker", "SPY"], "SPY")])
+def test_download_cli_ticker_selection(tmp_path, monkeypatch, arguments, ticker):
+    from indexpilot_us100.data import download
+    calls = []
+    def fetch(selected, start, end, output_dir):
+        calls.append((selected, start, end, output_dir))
+        return {"processed": output_dir / "snapshot.parquet"}
+    monkeypatch.setattr(download, "download_daily", fetch)
+    assert download.main([*arguments, "--start", "2015-01-01", "--end", "2026-10-06", "--output-dir", str(tmp_path)]) == 0
+    assert calls == [(ticker, "2015-01-01", "2026-10-06", tmp_path)]
