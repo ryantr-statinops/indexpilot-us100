@@ -1,6 +1,6 @@
 # IndexPilot US100 Documentation
 
-This documentation describes the **completed AAPL prototype**, from the price snapshot through the simulator, Q-learning, frozen test, and reproduction workflow. It is organized around how to use and understand the project; you do not need to read its implementation history to understand how it works.
+QQQ is an ETF proxy for Nasdaq-100; the project operates on one price series and does not construct a top-100 stock universe. This documentation describes the **single-asset Nasdaq-100 research prototype using QQQ**, from the price snapshot through the simulator, Q-learning, frozen test, and reproduction workflow. It is organized around how to use and understand the project; you do not need to read its implementation history to understand how it works.
 
 ## Contents
 
@@ -22,7 +22,7 @@ For example, if you only want to view equity and drawdown, restore the saved art
 
 | Chapter | Main topics |
 |---|---|
-| [01 — Overview](01-overview.md) | AAPL/US100 scope, stack, and architecture |
+| [01 — Overview](01-overview.md) | QQQ/Nasdaq-100 scope, stack, and architecture |
 | [02 — Quickstart](02-quickstart.md) | Setup, commands, archived experiment, and new snapshots |
 | [03 — Data](03-data.md) | Adjusted prices, quality checks, causal features, hashes, and splits |
 | [04 — Simulator](04-simulator.md) | Account, post-fee targets, reward, baselines, trades, and metrics |
@@ -30,6 +30,13 @@ For example, if you only want to view equity and drawdown, restore the saved art
 | [06 — Evaluation](06-evaluation.md) | Locked protocol, 60 scenarios, diagnostics, resume, and verification |
 | [07 — Results](07-results.md) | Validation/test results, activity, seeds, costs, and limitations |
 | [08 — Reproduction](08-reproduction.md) | Archive restore, runtime/hashes, report/chart, and troubleshooting |
+
+Additional experiment records:
+
+- [QQQ experiment rules](qqq-experiment.md): decisions recorded before QQQ training/test.
+- [QQQ verification evidence](qqq-verification.md): checked hashes, replay, accounting, tests, and archive.
+
+The previous AAPL experiment remains a [historical result](07-results.md#historical-aapl-experiment) with its own [reproduction instructions](08-reproduction.md#historical-aapl-reproduction). Its models and data are separate.
 
 ## Two reading paths
 
