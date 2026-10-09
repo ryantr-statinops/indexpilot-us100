@@ -1,6 +1,7 @@
 """Generate the final research report solely from checked persisted artifacts."""
 
 import json
+import shlex
 from pathlib import Path
 from .workflow import check_complete
 from dataclasses import dataclass
@@ -58,6 +59,7 @@ class ReportContext:
     diagnostics: dict[str, dict[str, Any]]
     years: list[dict[str, Any]]
     pairs: list[dict[str, Any]]
+    run_directory: Path | None = None
 
     @property
     def config(self) -> dict[str, Any]:
@@ -107,6 +109,7 @@ def load_report_context(root: Path) -> ReportContext:
         read("diagnostics"),
         read("yearly_summary"),
         read("paired_comparison"),
+        root.resolve(),
     )
 
 
@@ -295,20 +298,25 @@ Một tài sản, một chuỗi lịch sử, state discretization thô, chế đ
 
 
 def reproduction_section(context: ReportContext) -> str:
-    return """## 10. Tái tạo, artifacts và backlog
+    if context.run_directory is None:
+        raise ValueError("Report context needs its actual run directory")
+    root = shlex.quote(str(context.run_directory))
+    data = shlex.quote(context.protocol["input_file"])
+    figure = shlex.quote(str(context.run_directory / "figures/primary.png"))
+    risk_lambda = context.config["primary_lambda"]
+    cost_bps = context.config["primary_cost_bps"]
+    return f"""## 10. Replay and artifacts
 
 ```bash
 uv sync --python 3.11.16 --frozen --extra dev --extra charts
-uv run pytest -q
-uv run indexpilot-evaluate prepare --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet --source-run outputs/stage-3/aapl-default --config configs/stage-4.toml --output-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate run --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --save-png outputs/stage-4/aapl-frozen/figures/primary.png
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --seeds --risk-lambda 2 --cost-bps 10
+uv run indexpilot-evaluate run --protocol-dir {root} --data {data}
+uv run indexpilot-evaluate verify --protocol-dir {root} --data {data}
+uv run indexpilot-evaluate report --protocol-dir {root}
+uv run indexpilot-chart --run-dir {root} --save-png {figure}
+uv run indexpilot-chart --run-dir {root} --seeds --risk-lambda {risk_lambda:g} --cost-bps {cost_bps:g}
 ```
 
-Chuẩn bị mới cần source Stage 3 và exact snapshot; thư mục output phải mới. Sau một test hoàn tất, chuẩn bị protocol mới cần --reason; không coi đây là quyền chọn lại theo test. Để tái lập experiment đã khóa, restore protocol/frozen_models/preparation/runs và dùng verify; --data cho phép đổi đường dẫn snapshot nhưng phải khớp SHA256. Thiếu snapshot thì báo thiếu input.
+Use the frozen calculation revision and exact snapshot for run/verify. Restore the protocol, frozen models, preparation, saved results, and ledger first. These paths record this experiment's locations; when moving machines, substitute restored locations and supply --data with the same snapshot bytes. Hash checks still apply. Report and chart read saved artifacts without training or evaluation. New preparation is a separate experiment; use a new directory and a reason after a completed test.
 
 Artifacts gồm primary/scenario/seed/paired/yearly tables, diagnostics, protocol, ledger và từng run với equity/ledger/orders/trades/intervals/decisions/transitions. Report/chart chỉ đọc artifacts. GUI tùy chọn; PNG hỗ trợ QT_QPA_PLATFORM=offscreen. Data/models/detailed outputs nằm ngoài Git, cần lưu trữ riêng. Backlog: historical US100 universe tránh survivorship bias, multi-asset allocation, walk-forward, PPO, borrow/margin/slippage, state representation và data-provider archival."""
 

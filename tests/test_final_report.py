@@ -50,3 +50,23 @@ def test_report_identity_is_not_hardcoded(tmp_path, label):
         from indexpilot_us100.evaluation.final.report import ReportContext
         context = load_report_context(root)
         assert replace(context, protocol=protocol).instrument_label == "Single-asset experiment"
+
+
+def test_report_replay_commands_use_actual_paths(tmp_path):
+    import shlex
+    from indexpilot_us100.evaluation.final.report import load_report_context, reproduction_section
+    data, source, config = source_fixture(tmp_path)
+    root = tmp_path / "QQQ run with spaces"
+    prepare_protocol(data, source, replace(config, primary_cost_bps=20., costs_bps=(20.,), seeds=(42,)), root)
+    run_evaluation(root)
+    text = reproduction_section(load_report_context(root))
+    commands = [shlex.split(line) for line in text.splitlines() if line.startswith("uv run ")]
+    for command in commands:
+        key = "--run-dir" if "indexpilot-chart" in command else "--protocol-dir"
+        assert command[command.index(key) + 1] == str(root.resolve())
+        if "--data" in command:
+            assert command[command.index("--data") + 1] == str(data.resolve())
+    seed_command = commands[-1]
+    assert seed_command[seed_command.index("--cost-bps") + 1] == "20"
+    assert "aapl" not in text.lower()
+    assert "prepare --data" not in text
