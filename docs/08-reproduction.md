@@ -7,153 +7,164 @@
 - [Replay and verify](#replay-and-verify)
 - [Generate a report and PNG charts from artifacts](#generate-a-report-and-png-charts-from-artifacts)
 - [Prepare a new protocol from source](#prepare-a-new-protocol-from-source)
+- [Historical AAPL reproduction](#historical-aapl-reproduction)
 - [Troubleshooting](#troubleshooting)
 
 ## Requirements
 
-Exact reproduction requires **the same bytes of the locked snapshot, models, and configuration**. The repository contains only code/configuration/documentation; data, checkpoints, and detailed outputs are Git-ignored.
+Exact reproduction uses the same snapshot, frozen models, protocol, and compatible calculation code. Git contains code/configuration/docs; market data, models, detailed outputs, and archives are local.
 
-| Input | Needed for |
-|---|---|
-| Repository and `uv.lock` compatible with the protocol | Running the evaluator/verification |
-| Exact processed Parquet | Running or recomputing verification |
-| `protocol.json`, `frozen_models`, and `preparation` | Loading/checking the frozen inventory and provenance |
-| Saved runs/summaries/manifest | Reusing a completed run, comparing verification, report/chart |
-| Source learning run | Preparing the inventory again from source |
-| Experiment ledger | Retaining the preparation/evaluation history |
-
-The current local archive is `outputs/stage-4/aapl-reproduction.tar.gz`, about 16 MB. Its manifest is `outputs/stage-4/reproduction_archive_manifest.json`.
+The QQQ archive is `outputs/stage-4/qqq-reproduction.tar.gz` (18,851,540 bytes). Its manifest is `outputs/stage-4/qqq_reproduction_archive_manifest.json`. Obtain the archive separately from the experiment machine, subject to data-use permissions.
 
 ```text
 Archive SHA256:
-4a47e5d16e617a14328b37be2869cc2e7825b803f14bcfba4ff8c63e68789889
-
+1d7d90c25d797ae6b248cd91254aee0c515593a61bc713532c3d549b178f527e
 Dataset SHA256:
-042605225d9f9dc91ac983ceb13079f09077a569bd485dd06774263f994db3cc
-
+4db7a3175dfe288b7a440a2b3cd4996e0322420429fd55feeb3dce8c7d02b9f2
 Protocol ID:
-5fbce9eb3c97815487c57b7eaca4502390562e37ed062609d72c87ba189ec18b
-
+16af504702802ec895620d84c64550f5919fbc1933af9151cced8f5c4b8db2dd
 Calculation revision:
-b6c550da754fec519d14b7a0a9610a219b303904
+e2c4cba4f1d51876dad8373d1ffbf41e72050cd0
 ```
 
-The archive is on the machine that ran the experiment and is not downloaded with a Git clone. Transfer the archive separately in accordance with data-use permissions. Do not treat a fresh Yahoo download as an exact replacement if its hash differs.
+The archive includes the QQQ source snapshot/manifest, Stage 2 baselines, Stage 3 learning run, frozen models/preparation/protocol, saved runs/summaries/manifest, report/figures, audit and local verification record, and a ledger snapshot. Full duplicate verification directories are excluded. See [verification evidence](qqq-verification.md) for the clean-environment record stored separately.
 
 ## Restore the archive in a clean checkout
 
-Example, with the archive stored separately on the machine:
+Use a separate checkout so another experiment is not overwritten:
 
 ```bash
-git clone https://github.com/ryantr-statinops/indexpilot-us100.git indexpilot-us100-frozen
-cd indexpilot-us100-frozen
-git checkout --detach b6c550d
+git clone https://github.com/ryantr-statinops/indexpilot-us100.git indexpilot-qqq-frozen
+cd indexpilot-qqq-frozen
+git checkout --detach e2c4cba4f1d51876dad8373d1ffbf41e72050cd0
 uv sync --python 3.11.16 --frozen --extra dev --extra charts
 
-sha256sum /absolute/path/aapl-reproduction.tar.gz
-tar -xzf /absolute/path/aapl-reproduction.tar.gz \
-  data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet \
-  outputs/stage-3/aapl-default \
-  outputs/stage-4/aapl-frozen \
+sha256sum /absolute/path/qqq-reproduction.tar.gz
+tar -xzf /absolute/path/qqq-reproduction.tar.gz \
+  data/qqq \
+  outputs/stage-2/qqq-default \
+  outputs/stage-3/qqq-default \
+  outputs/stage-4/qqq-frozen \
   outputs/stage-4/experiment-ledger.jsonl
 ```
 
-Replace the archive path with the actual file location. The listed archive members are the experiment inputs/artifacts. Use a new checkout so you do not overwrite another local experiment.
-
-The code revision used when the protocol was locked is `b6c550d`. Main now includes Python hardening and refactoring, so exact `run`/`verify` of the old archive requires this checkout. Preserve the protocol/model/data hashes; do not update the old fingerprint to bypass an error. Read the current documentation from main and run replay commands in the separate frozen checkout. Report/chart commands can read the old artifacts on main as well.
-
-Documentation-only revisions remain compatible; changes to code, including formatting/types/report helpers, are detected because the fingerprint includes the entire Python package.
+Compare the archive SHA256 before extraction. Replace the archive path with its actual location. Keep protocol/model/data hashes unchanged. Documentation-only commits after the calculation revision remain compatible; changes anywhere in the Python package or lockfile can change the fingerprint. Read current instructions on main and replay in the frozen checkout if needed.
 
 ## Replay and verify
 
-When moving to another machine, the absolute `input_file` path in the protocol may point to the old machine. Use `--data` to provide the restored file; its SHA256 must still match:
+The protocol can record an absolute snapshot path from the original machine. Supply the relocated exact file with `--data`:
 
 ```bash
 uv run indexpilot-evaluate run \
-  --protocol-dir outputs/stage-4/aapl-frozen \
-  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+  --protocol-dir outputs/stage-4/qqq-frozen \
+  --data data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet
 
 uv run indexpilot-evaluate verify \
-  --protocol-dir outputs/stage-4/aapl-frozen \
-  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+  --protocol-dir outputs/stage-4/qqq-frozen \
+  --data data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
-For a completed archive, `run` checks integrity and returns the artifacts; `verify` actually recomputes 60 scenarios in a new `verification-*` directory and compares them with the saved results. You can run `run` to resume an incomplete experiment; completed scenarios are hash-checked before reuse.
+For a completed archive, `run` checks integrity and reuses persisted results. `verify` recomputes all 60 scenarios in a new `verification-*` directory and compares summary files, decisions, RL transitions, accounting Parquet, metrics, and diagnostics. Timestamp/Git fields in exporter manifests are excluded from the numerical comparison; provenance artifacts remain hash-protected. The verified event is appended to the local ledger.
 
-Verification compares decisions, RL transitions, accounting Parquet files, metrics/diagnostics, and summary files. Exporter timestamps/Git fields are not part of the numerical comparison, but provenance files remain in the completion hashes. A verified event is appended to the ledger.
+An interrupted run can resume; completed scenarios are checked before reuse. Do not run `prepare` in the restored frozen directory. Fresh Yahoo downloads can revise adjustments and do not replace the exact snapshot.
 
-Fixture tests can run independently of the snapshot/Yahoo:
+Synthetic tests are independent of market snapshots and Yahoo:
 
 ```bash
 uv run pytest -q
 ```
 
-The locked AAPL revision has 175 tests and an independent 60-scenario replay in a clean virtual environment. The hardened main suite has 191 tests; fixtures cover the adjusted-close requirement, inputs changing during preparation, atomic manifest/recovery, December insolvency coverage, and report composition. The aggregate matrix before and after refactoring retained the same summaries, accounting tables, and Q/visits; the generated report remained byte-identical. AAPL was independently verified again, 60/60, in a separate checkout at `b6c550d` after hardening.
+The QQQ calculation revision passed 206 tests in both the implementation checkout and a fresh environment. Local and relocated clean-environment verification each replayed 60/60. Reports contain location-specific replay commands, so moving the archive changes report paths; the financial artifacts still match exactly.
 
 ## Generate a report and PNG charts from artifacts
 
-These commands read saved results; they do not train or reevaluate:
+These commands read saved results without training or evaluation:
 
 ```bash
-uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/qqq-frozen
 
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen \
-  --save-png outputs/stage-4/aapl-frozen/figures/primary.png
+uv run indexpilot-chart --run-dir outputs/stage-4/qqq-frozen \
+  --save-png outputs/stage-4/qqq-frozen/figures/primary.png
 
 QT_QPA_PLATFORM=offscreen uv run indexpilot-chart \
-  --run-dir outputs/stage-4/aapl-frozen --seeds --risk-lambda 2 --cost-bps 10 \
-  --save-png outputs/stage-4/aapl-frozen/figures/primary-seeds.png
+  --run-dir outputs/stage-4/qqq-frozen --seeds --risk-lambda 0.5 --cost-bps 10 \
+  --save-png outputs/stage-4/qqq-frozen/figures/primary-seeds.png
 ```
 
-By default, the report is `report.md` in the run directory. Optional `--output` selects another destination; the [results chapter](07-results.md) is a separate editorial interpretation, while the generated report is stored locally.
+The report defaults to `report.md` in the run directory; `--output` selects another destination. It uses the frozen instrument label and actual protocol/data paths. The English [results chapter](07-results.md) is a separate editorial interpretation; the generated report also retains existing Vietnamese explanatory sections.
 
-The chart has two panels for equity/drawdown; `--cost-bps` selects a declared cost, while `--seeds` and `--risk-lambda` select all RL seeds for one lambda. `--save-png` renders with Qt and then closes the window. Offscreen rendering works without a desktop display; the core evaluator does not need the `charts` extra.
-
-You can read tables directly:
+FinPlot has equity/drawdown panels. `--cost-bps` chooses a declared cost; `--seeds` and `--risk-lambda` select all seeds for that lambda. `--save-png` renders with Qt and closes the window. Offscreen rendering is available without a desktop display; core evaluation does not require the `charts` extra.
 
 ```python
 import polars as pl
 
-root = "outputs/stage-4/aapl-frozen"
+root = "outputs/stage-4/qqq-frozen"
 print(pl.read_csv(f"{root}/primary_summary.csv"))
 print(pl.read_csv(f"{root}/paired_comparison.csv"))
 ```
 
 ## Prepare a new protocol from source
 
-To create a protocol with the hardened code, use a **separate main checkout**, restore the exact snapshot/source learning run and ledger, select a different output directory, and record a reason after a test has been completed. The following commands run on main:
+To prepare a new experiment on current compatible code, restore the exact QQQ source snapshot/learning run and ledger, choose a fresh directory, and record a reason:
 
 ```bash
 uv run indexpilot-evaluate prepare \
-  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet \
-  --source-run outputs/stage-3/aapl-default \
-  --config configs/stage-4.toml \
-  --output-dir outputs/stage-4/aapl-reprepared \
-  --reason "Rebuild inventory from archived training inputs"
+  --data data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet \
+  --source-run outputs/stage-3/qqq-default \
+  --config configs/stage-4-qqq.toml \
+  --output-dir outputs/stage-4/qqq-reprepared \
+  --reason "Rebuild QQQ inventory from archived training inputs"
 ```
 
-`prepare` copies the two seed-42 checkpoints and trains eight additional models on the original training segment; it does not evaluate the test. The protocol ID changes because the preparation timestamp is different. To replay the **old experiment**, use the archived inventory and old protocol instead of preparing again.
+For the published QQQ source, primary lambda is 0.5 and reference is 0. Preparation copies two seed-42 checkpoints and trains eight additional models on training only. It does not evaluate the test, and the new preparation timestamp creates a new protocol ID. Run a newly prepared protocol using its own directory; restore the published archive to replay the original protocol.
 
-The raw CSV can also be reprocessed to learn the pipeline, but exact reproduction requires a Parquet file with the hash of the locked snapshot. Do not bypass a hash mismatch.
+A fresh training run may select another lambda. Apply the [predeclared reference rule](qqq-experiment.md) and create its own config/protocol before test evaluation; do not edit the published QQQ config to match a new test outcome. Reprocessing raw CSV is useful for learning the pipeline, but exact reproduction still requires matching Parquet bytes/hash.
+
+## Historical AAPL reproduction
+
+The earlier AAPL archive and protocol remain separate and were preserved during the QQQ migration:
+
+```text
+Archive: outputs/stage-4/aapl-reproduction.tar.gz
+Archive SHA256: 4a47e5d16e617a14328b37be2869cc2e7825b803f14bcfba4ff8c63e68789889
+Dataset SHA256: 042605225d9f9dc91ac983ceb13079f09077a569bd485dd06774263f994db3cc
+Protocol ID: 5fbce9eb3c97815487c57b7eaca4502390562e37ed062609d72c87ba189ec18b
+Calculation revision: b6c550da754fec519d14b7a0a9610a219b303904
+```
+
+In a separate checkout of the original AAPL calculation revision with Python 3.11.16 and its frozen lockfile, restore:
+
+```bash
+tar -xzf /absolute/path/aapl-reproduction.tar.gz \
+  data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet \
+  outputs/stage-3/aapl-default \
+  outputs/stage-4/aapl-frozen \
+  outputs/stage-4/experiment-ledger.jsonl
+
+uv run indexpilot-evaluate verify \
+  --protocol-dir outputs/stage-4/aapl-frozen \
+  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+```
+
+The original AAPL revision had 175 tests and recorded 60-scenario verification. Those are historical checks, not new AAPL recomputation during the QQQ migration. Current report/chart tools can read saved AAPL artifacts; absent an instrument label, generated report identity is neutral single-asset. Exact AAPL run/verify needs its compatible original code, not QQQ checkpoints or an edited fingerprint.
 
 ## Troubleshooting
 
 | Problem | Resolution |
 |---|---|
-| Parquet/models/artifacts missing after clone | Restore the archived inputs; review the requirements first |
-| Data hash changed | Find the snapshot with the recorded hash; use `--data` to change the path if the bytes match |
-| Model/log/source hash changed | Restore the original archive and compare with its manifest |
-| Code or dependency lock changed | The old AAPL archive uses `b6c550d`; hardened main requires a new protocol; do not edit the old fingerprint |
-| Numerical runtime differs | Create a separate environment with Python 3.11.16 and the frozen lockfile |
-| Prepare output already exists | Use a new directory; `run`/`verify` use the existing protocol |
-| New protocol requires a reason | Provide a specific reason and preserve the ledger history; do not reselect based on the test |
-| This protocol is already being evaluated | Check the running process and wait for it to finish |
-| Scenario/summary integrity failed | Keep the failed copy for audit and restore outputs with the expected hash |
-| FinPlot/display unavailable | Install the `charts` extra; use a desktop or `QT_QPA_PLATFORM=offscreen` for PNG output |
-| Insufficient warm-up/no interval | Check the boundary and history length; do not fill prices to bypass the error |
+| Missing snapshot/models/results after clone | Obtain and restore the correct separate archive |
+| Data hash changed | Use the exact snapshot; `--data` changes location, not required bytes |
+| Model/log/source hash changed | Restore original archived artifacts and compare their manifest |
+| Code or lockfile changed | Use the experiment's frozen revision or prepare a separate protocol |
+| Numerical runtime differs | Use Python 3.11.16 and the frozen lockfile in a separate environment |
+| Prepare output exists | Choose a new directory; use `run`/`verify` for an existing protocol |
+| New protocol requires reason | Record a specific purpose and preserve ledger history |
+| Source selection does not match primary | Use that source run's validation selection and predeclared reference rule before evaluating test |
+| Protocol already being evaluated | Check the active process and wait for completion |
+| Scenario/summary integrity failed | Preserve the failed copy for audit and restore correct outputs |
+| FinPlot/display unavailable | Install `charts`; use desktop or `QT_QPA_PLATFORM=offscreen` for PNG |
+| Insufficient warm-up/coverage | Inspect boundaries and source history; do not fill prices or shorten the frozen horizon |
 
-The evaluator uses `fcntl` for locking; the validated runtime is Linux. Windows support has not been implemented.
+Locking uses `fcntl`; Linux is the verified runtime. Windows support has not been implemented. Keep the exact snapshot, source run, frozen inventory/results, and ledger together in backups. Report/CSV files do not replace inputs needed for recomputation.
 
-Local backups should keep the exact snapshot, source, frozen inventory, detailed results, and ledger together. Reports/CSVs help read the results; they do not replace the checkpoints and snapshot needed for recomputation.
-
-**Next:** the [project README](../README.md) links to the quickstart and documentation index.
+**Next:** the [project README](../README.md) links to quickstart and documentation.
