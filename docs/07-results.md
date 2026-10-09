@@ -9,171 +9,154 @@
 - [Seeds and cost sensitivity](#seeds-and-cost-sensitivity)
 - [Primary results by year](#primary-results-by-year)
 - [Limitations and lessons](#limitations-and-lessons)
+- [Historical AAPL experiment](#historical-aapl-experiment)
 - [Verification evidence](#verification-evidence)
 
 ## Experiment reported here
 
-The results below are read from saved artifacts; the policies are not rerun. The [frozen protocol](06-evaluation.md) defines primary lambda 2/seed 42/10 bps and reference lambda 0; these choices were not changed after viewing the test.
+This chapter reports the verified **QQQ / Nasdaq-100 ETF** experiment. Tables are read from persisted artifacts; they are not AAPL numbers with a different ticker label. The [predeclared rules](qqq-experiment.md) selected primary lambda 0.5 by QQQ validation and reference lambda 0 before viewing the test.
 
-- Training: through the end of 2020; actual validation coverage 2021-01-04 to 2022-12-30.
-- Test: **2023-01-03 to 2026-10-02**, 940 open-to-open intervals; 2026 is a partial year.
-- Each run resets to $100,000; all policies use the same engine.
-- 10 models and 60 scenarios; all completed, with no insolvencies on this snapshot.
-- Protocol ID: `5fbce9eb3c97815487c57b7eaca4502390562e37ed062609d72c87ba189ec18b`.
-- Calculation revision: `b6c550d`; see [snapshot SHA256 and convention](03-data.md#experiment-snapshot).
+- Training through 2020; validation 2021-01-04 to 2022-12-30.
+- Test **2023-01-03 to 2026-10-02**, 940 open-to-open intervals; 2026 is a partial year.
+- Reset flat/$100,000 per run, with the same engine for all policies.
+- Ten models and 60 scenarios; all completed with no insolvencies on this snapshot.
+- Protocol ID: `16af504702802ec895620d84c64550f5919fbc1933af9151cced8f5c4b8db2dd`.
+- Calculation revision: `e2c4cba4f1d51876dad8373d1ffbf41e72050cd0`; [snapshot identity](03-data.md#experiment-snapshot).
 
-The tables here select information needed to interpret the results. Full scenario/seed/paired/yearly tables and the generated report are stored locally under `outputs/stage-4/aapl-frozen`; they are not committed to the docs.
+Detailed scenario/seed/paired/yearly tables and the generated report are local under `outputs/stage-4/qqq-frozen`, outside Git. QQQ is an ETF proxy; the simulator uses synthetic adjusted prices rather than actual historical fills.
 
 ## Validation and selected model
 
-100 episodes per lambda, seed 42, fees of 10 bps:
+100 episodes per lambda, seed 42, training fees of 10 bps:
 
 | Lambda | Equity USD | Sharpe | MDD | CAGR | Trades |
-|---|---:|---:|---:|---:|---:|
-| 0.0 | 88,470.96 | -0.162 | 32.56% | -5.98% | 174 |
-| 0.5 | 103,386.52 | 0.297 | 8.23% | 1.69% | 34 |
-| 1.0 | 103,687.96 | 0.595 | 2.05% | 1.84% | 4 |
-| 2.0 | 103,584.38 | 0.698 | 0.05% | 1.79% | 1 |
+| --- | --- | --- | --- | --- | --- |
+| 0.000 | 101,820.67 | 0.138 | 19.99% | 0.91% | 118 |
+| 0.500 | 103,575.88 | 0.545 | 2.99% | 1.79% | 17 |
+| 1.000 | 98,959.47 | -0.486 | 1.50% | -0.53% | 8 |
+| 2.000 | 100,000.00 | N/A | 0.00% | 0.00% | 0 |
 
-Lambda 2 had the highest validation Sharpe, but only **one trade** and 99.80% flat decisions. That trade ran from 2022-02-24 to 2022-02-25 and had net P&L of about $3,584.38. Infinite Profit Factor or high Calmar alongside one trade does not demonstrate predictive skill.
-
-The selection was retained for test evaluation. A strong validation result does not guarantee a strong test result.
+Lambda 0.5 had the highest finite validation Sharpe, approximately 0.545, with 17 trades and 96.02% flat decisions. Lambda 2 stayed entirely flat and had undefined Sharpe. The primary selection was retained for the test; the reference follows the predeclared rule (0 for a nonzero primary). Validation performance does not establish generalization.
 
 ## Primary test results
 
-Seed 42, fees of 10 bps, same intended/actual coverage:
+Seed 42, fees of 10 bps, matching intended and actual coverage:
 
 | Policy | Equity USD | Return | Sharpe | MDD | CAGR | PF | Calmar |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| q_lambda_0 | 82,583.96 | -17.42% | -0.196 | 35.69% | -4.98% | 0.908 | -0.140 |
-| q_lambda_2 | 99,239.61 | -0.76% | -0.479 | 0.90% | -0.20% | 0.111 | -0.225 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| q_lambda_0 | 110,783.62 | 10.78% | 0.259 | 23.74% | 2.77% | 1.106 | 0.117 |
+| q_lambda_0.5 | 98,873.80 | -1.13% | -0.062 | 7.37% | -0.30% | 0.900 | -0.041 |
 | cash | 100,000.00 | 0.00% | N/A | 0.00% | 0.00% | N/A | N/A |
-| buy_hold | 259,848.56 | 159.85% | 1.074 | 33.33% | 29.04% | ∞ | 0.871 |
-| fixed_long_50 | 166,436.56 | 66.44% | 1.069 | 17.87% | 14.57% | ∞ | 0.816 |
-| fixed_short_50 | 55,309.02 | -44.69% | -1.094 | 46.14% | -14.63% | 0.000 | -0.317 |
-| sma20_long_flat | 180,613.50 | 80.61% | 0.962 | 27.12% | 17.10% | 2.080 | 0.631 |
-| random_discrete | 141,276.23 | 41.28% | 0.550 | 29.09% | 9.66% | 1.130 | 0.332 |
+| buy_hold | 285,102.39 | 185.10% | 1.492 | 24.17% | 32.28% | ∞ | 1.335 |
+| fixed_long_50 | 171,736.93 | 71.74% | 1.486 | 12.77% | 15.53% | ∞ | 1.217 |
+| fixed_short_50 | 55,441.05 | -44.56% | -1.514 | 45.08% | -14.57% | 0.000 | -0.323 |
+| sma20_long_flat | 172,382.46 | 72.38% | 1.153 | 18.79% | 15.65% | 1.828 | 0.833 |
+| random_discrete | 79,370.74 | -20.63% | -0.356 | 41.43% | -5.98% | 0.910 | -0.144 |
 
-Return/MDD/CAGR are rates; Sharpe/PF/Calmar are ratios. Infinite PF for buy and hold and fixed long 50 means one closed position episode was profitable; it does not mean there was no drawdown. Cash has N/A for Sharpe/PF/Calmar because it has no variation/trades and both CAGR/MDD are zero.
+Return/MDD/CAGR are rates; Sharpe/PF/Calmar are ratios. Infinite Profit Factor for a one-trade winning position episode does not mean no drawdown. Cash has undefined Sharpe/PF/Calmar because there is no variation or trade and both CAGR/MDD are zero.
 
-| Policy | Fees USD | Orders | Trades | Active/940 | Flat actions |
-|---|---:|---:|---:|---:|---:|
-| q_lambda_0 | 45,755.41 | 655 | 266 | 760 | 19.15% |
-| q_lambda_2 | 199.43 | 4 | 2 | 2 | 99.79% |
+| Policy | Fees USD | Orders | Trades | Active / 940 | Flat actions |
+| --- | --- | --- | --- | --- | --- |
+| q_lambda_0 | 30,124.88 | 832 | 127 | 849 | 9.68% |
+| q_lambda_0.5 | 2,854.80 | 29 | 15 | 15 | 98.40% |
 | cash | 0.00 | 0 | 0 | 0 | 100.00% |
-| buy_hold | 360.01 | 2 | 1 | 940 | 0.00% |
-| fixed_long_50 | 496.73 | 941 | 1 | 940 | 0.00% |
-| fixed_short_50 | 686.97 | 941 | 1 | 940 | 0.00% |
-| sma20_long_flat | 11,287.85 | 80 | 40 | 575 | 38.83% |
-| random_discrete | 96,136.87 | 851 | 450 | 740 | 21.28% |
+| buy_hold | 385.29 | 2 | 1 | 940 | 0.00% |
+| fixed_long_50 | 431.43 | 941 | 1 | 940 | 0.00% |
+| fixed_short_50 | 554.65 | 941 | 1 | 940 | 0.00% |
+| sma20_long_flat | 17,043.51 | 112 | 56 | 645 | 31.38% |
+| random_discrete | 81,801.96 | 851 | 450 | 740 | 21.28% |
 
-Buy and hold buys at the start, holds the units, and sells at the end; fixed exposure rebalances every session. Order count and trade count can therefore differ greatly even when there is only one long-position episode. Full-sample baselines from 2015 were used to check the simulator; the tables above cover only the locked experiment's test segment.
+Buy and hold buys at the first eligible open, keeps units, and sells at the final open. Fixed-exposure policies rebalance each session; scale changes remain in the same directional trade. Full-snapshot Stage 2 baselines run through 2026-10-05 and are separate diagnostics; these tables cover only the frozen test through 2026-10-02.
 
 ## Primary model activity
 
-Lambda 2 lost **0.76%**, ending with equity of $99,239.61, below cash and buy and hold. Its MDD of only 0.90% came with **2/940 active intervals** and **938/940 flat actions**.
+The primary lost **1.13%**, finishing at $98,873.80, with MDD 7.37%, 15 closed trades, and **15/940 active intervals**. Flat decisions accounted for 98.40%; mean gross exposure was 1.49%. Fees totaled $2,854.80. It underperformed cash and buy and hold.
 
-Both trades targeted 50% long and each lasted one interval:
+The unseen-state fraction was 3.19%; most decisions still came from states encountered during training. Diagnostic flags: mostly_flat, unseen_states_present. Low exposure is central to interpreting its results; low drawdown alone does not establish predictive skill.
 
-| Open → close | Gross P&L USD | Fees USD | Net P&L USD |
-|---|---:|---:|---:|
-| 2025-01-03 → 2025-01-06 | +195.09 | 100.15 | +94.94 |
-| 2026-02-13 → 2026-02-17 | −756.04 | 99.29 | −855.33 |
-
-The second row's gross loss and opening/closing fees combine to a net loss of $855.33. The two net P&Ls sum to about −$760.39, matching final equity minus initial capital.
-
-The primary's unseen-state fraction was 2.55%; most flat decisions were still in states seen during training. A strong volatility penalty encourages avoiding exposure. With so few trades, the metrics do not provide enough evidence of predictive skill; low drawdown should not be interpreted as a strategy better than cash.
-
-Lambda 0 was active for 760 intervals, closed 266 trades, paid about $45,755.41 in fees, and lost 17.42%. The gap from training performance illustrates the risk of repeatedly fitting to one history and poor generalization.
+The reference lambda 0 was much more active and earned +10.78% at seed 42/10 bps, but still lagged buy and hold (+185.10%). Neither its positive return nor primary validation Sharpe establishes that the policy outperforms simple baselines.
 
 ## Seeds and cost sensitivity
 
 ### All RL seeds at 10 bps
 
 | Lambda | Seed | Return | Sharpe | MDD | Trades | Active | Flat actions |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| 0.0 | 42 | -17.42% | -0.196 | 35.69% | 266 | 760 | 19.15% |
-| 2.0 | 42 | -0.76% | -0.479 | 0.90% | 2 | 2 | 99.79% |
-| 0.0 | 7 | -13.24% | -0.083 | 47.07% | 218 | 793 | 15.64% |
-| 2.0 | 7 | -2.06% | -0.618 | 2.34% | 2 | 3 | 99.68% |
-| 0.0 | 21 | -29.65% | -0.350 | 45.63% | 241 | 781 | 16.91% |
-| 2.0 | 21 | -1.03% | -0.618 | 1.17% | 2 | 3 | 99.68% |
-| 0.0 | 84 | -27.97% | -0.397 | 43.96% | 249 | 701 | 25.43% |
-| 2.0 | 84 | -1.52% | -0.479 | 1.81% | 2 | 2 | 99.79% |
-| 0.0 | 123 | -29.94% | -0.385 | 52.06% | 268 | 786 | 16.38% |
-| 2.0 | 123 | 0.78% | 0.155 | 1.71% | 3 | 4 | 99.57% |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0.000 | 42 | 10.78% | 0.259 | 23.74% | 127 | 849 | 9.68% |
+| 0.500 | 42 | -1.13% | -0.062 | 7.37% | 15 | 15 | 98.40% |
+| 0.000 | 7 | -19.56% | -0.345 | 42.34% | 170 | 807 | 14.15% |
+| 0.500 | 7 | -6.07% | -0.273 | 8.36% | 23 | 23 | 97.55% |
+| 0.000 | 21 | -27.39% | -0.555 | 36.12% | 253 | 762 | 18.94% |
+| 0.500 | 21 | 0.11% | 0.032 | 5.74% | 19 | 19 | 97.98% |
+| 0.000 | 84 | -27.17% | -0.522 | 43.46% | 200 | 781 | 16.91% |
+| 0.500 | 84 | -9.80% | -0.379 | 12.57% | 25 | 25 | 97.34% |
+| 0.000 | 123 | -27.09% | -0.473 | 42.79% | 255 | 772 | 17.87% |
+| 0.500 | 123 | -1.41% | -0.046 | 7.56% | 19 | 19 | 97.98% |
 
-Seed 42 remains primary; it was not replaced with seed 123 after seeing a positive return. All lambda-2 runs were sparse/mostly flat. Random seed 42 also made money on the test, which is not enough to establish quality: the mean of five random seeds at 10 bps was −22.46%, with sample standard deviation of 38.92 percentage points.
+Seed 42 remains primary even when another seed performs better. These seeds represent stochastic learning or random decisions on the same history; they are not independent market samples.
 
 ### Net return summaries
 
 | Policy | bps | Mean return | Median | Std (percentage points) | Min | Max |
-|---|---:|---:|---:|---:|---:|---:|
-| random_discrete | 0 | 64.93% | 61.16% | 83.90 | -3.00% | 203.22% |
-| random_discrete | 10 | -22.46% | -23.19% | 38.92 | -54.58% | 41.28% |
-| random_discrete | 20 | -63.54% | -63.39% | 18.06 | -78.73% | -34.18% |
-| q_lambda_0 | 0 | 26.89% | 22.81% | 31.93 | -11.42% | 72.43% |
-| q_lambda_0 | 10 | -23.64% | -27.97% | 7.77 | -29.94% | -13.24% |
-| q_lambda_0 | 20 | -46.72% | -50.23% | 10.21 | -57.72% | -34.52% |
-| q_lambda_2 | 0 | -0.56% | -0.83% | 1.16 | -1.67% | 1.38% |
-| q_lambda_2 | 10 | -0.92% | -1.03% | 1.07 | -2.06% | 0.78% |
-| q_lambda_2 | 20 | -1.27% | -1.23% | 1.00 | -2.45% | 0.17% |
+| --- | --- | --- | --- | --- | --- | --- |
+| random_discrete | 0.0 | 33.86% | 38.00% | 26.747 | 5.27% | 70.34% |
+| random_discrete | 10.0 | -37.01% | -34.85% | 12.236 | -49.83% | -20.63% |
+| random_discrete | 20.0 | -70.36% | -69.24% | 5.600 | -76.09% | -63.02% |
+| q_lambda_0 | 0.0 | 11.86% | 8.27% | 15.162 | -0.31% | 37.55% |
+| q_lambda_0 | 10.0 | -18.08% | -27.09% | 16.474 | -27.39% | 10.78% |
+| q_lambda_0 | 20.0 | -38.77% | -38.23% | 17.795 | -63.54% | -13.89% |
+| q_lambda_0.5 | 0.0 | -0.37% | 1.70% | 3.866 | -5.71% | 3.48% |
+| q_lambda_0.5 | 10.0 | -3.66% | -1.41% | 4.161 | -9.80% | 0.11% |
+| q_lambda_0.5 | 20.0 | -6.01% | -4.53% | 3.149 | -10.60% | -3.14% |
 
-Each row uses all five seeds and five finite net returns; none were insolvent. This is the sample standard deviation of stochastic training outcomes on the **same history**, not a confidence interval for future returns. Other metrics may be undefined or infinite; the full `seed_summary` retains status counts and aggregates finite values only.
+Each row has five finite net returns and no insolvencies. Sample standard deviation is not a confidence interval for future returns. Other metrics can be undefined or infinite; full seed summaries retain all status counts and aggregate finite values only.
 
 ### Seed 42 at three fee levels
 
-| Policy, seed 42 | 0 bps | 10 bps | 20 bps |
-|---|---:|---:|---:|
-| q_lambda_0 | 72.43% | -17.42% | -34.52% |
-| q_lambda_2 | -0.56% | -0.76% | -0.96% |
+| Policy | 0 bps | 10 bps | 20 bps |
+| --- | --- | --- | --- |
+| q_lambda_0 | 37.55% | 10.78% | -13.89% |
+| q_lambda_0.5 | 1.70% | -1.13% | -3.87% |
 | cash | 0.00% | 0.00% | 0.00% |
-| buy_hold | 160.37% | 159.85% | 159.33% |
-| fixed_long_50 | 67.06% | 66.44% | 65.81% |
-| fixed_short_50 | -44.18% | -44.69% | -45.20% |
-| sma20_long_flat | 95.66% | 80.61% | 66.73% |
-| random_discrete | 203.22% | 41.28% | -34.18% |
+| buy_hold | 185.67% | 185.10% | 184.53% |
+| fixed_long_50 | 72.28% | 71.74% | 71.19% |
+| fixed_short_50 | -44.14% | -44.56% | -44.97% |
+| sma20_long_flat | 92.81% | 72.38% | 54.12% |
+| random_discrete | 70.34% | -20.63% | -63.02% |
 
-Fees change equity/account state; a frozen Q table does not guarantee identical actions across cost scenarios. Sensitivity therefore evaluates the same learned policy under different execution assumptions, instead of only subtracting additional fees from one equity curve. Costs of 0/20 bps were not used to choose a favorable fee level; the primary result remains at 10 bps.
+Fees affect equity/account state, so frozen Q does not guarantee identical actions at different costs. Sensitivity reruns the learned policy under each execution assumption; it does not just subtract fees from one equity curve. The primary cost remains 10 bps.
 
 ## Primary results by year
 
 | Year | Intervals | Net return | Fees USD | Active | Closed trades | Coverage |
-|---|---:|---:|---:|---:|---:|---|
-| 2023 | 249 | 0.00% | 0.00 | 0 | 0 | As declared for the horizon |
-| 2024 | 252 | 0.00% | 0.00 | 0 | 0 | As declared for the horizon |
-| 2025 | 250 | 0.09% | 100.15 | 1 | 1 | As declared for the horizon |
-| 2026 | 189 | -0.85% | 99.29 | 1 | 1 | Partial year |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2023 | 249 | -1.74% | 201.34 | 1 | 1 | As declared for the horizon |
+| 2024 | 252 | 1.69% | 493.27 | 3 | 3 | As declared for the horizon |
+| 2025 | 250 | 4.56% | 1,340.11 | 7 | 7 | As declared for the horizon |
+| 2026 | 189 | -5.36% | 820.07 | 4 | 4 | Partial year |
 
-This is one continuous account; it does not reset on January 1. Intervals are assigned by **end_date**, so an interval from the final December open to the first January open belongs to the new year. Annual returns compound to total return; trade P&L is not used in place of calendar return.
-
-There were no trades in 2023–2024; that is a result worth reporting. The 2026 return only runs through the October 2 open and should not be compared as a full calendar year.
+This is one continuous account without a January 1 reset. Intervals are assigned by end_date, so a December-to-January holding interval belongs to the new year. Annual returns compound to total return. Trade P&L is not a replacement for calendar return; the 2026 result only ends at the October 2 open. Coverage labels refer to declared eligible boundaries, not an exchange-calendar completeness audit.
 
 ## Limitations and lessons
 
-- One AAPL ticker and one history do not represent US100 or every market regime.
-- Validation-based selection has selection bias; the test checks only this fixed protocol.
-- The 3,840 bins combine distinct situations; the Q table does not prove that prices are Markov.
-- The per-interval risk proxy and large lambda can make the agent almost always flat.
-- Synthetic prices, proportional fees, and shorts without financing/borrow/margin modeling differ from brokerage conditions.
-- Seed variability does not replace independent market histories or walk-forward evaluation.
-- Historical adjustments can be revised; a fresh Yahoo download is not exact reproduction.
+- One ETF and one history do not establish performance across market regimes or independent histories.
+- QQQ tracks Nasdaq-100 but has its own distributions, fund costs, and tracking characteristics; the experiment does not trade index constituents or the index series directly.
+- Fixed coarse state bins approximate the decision problem; they do not establish a Markov price process.
+- Validation selection has selection bias; the test evaluates the configuration already chosen.
+- Risk penalties can encourage near-flat behavior. Read return/Sharpe alongside exposure, trade counts, fees, and coverage.
+- Synthetic adjusted prices and proportional trading fees are simplified execution assumptions; borrow fees, financing, margin calls, and separate slippage are not modeled.
+- Historical adjustments can change; fresh Yahoo downloads do not replace a frozen snapshot.
 
-The main lesson is to read return/Sharpe alongside exposure, trade counts, fees, and coverage. The prototype validates the accounting and evaluation mechanics; these results do not support a claim that RL beats the baselines or is profitable in live trading.
+Further single-asset research can examine walk-forward evaluation, independent histories, richer costs, and improved state representation. This experiment validates reproducible accounting/evaluation and does not demonstrate that RL beats the baselines or is profitable live.
 
-Possible extensions include point-in-time US100 membership, multi-asset actions, walk-forward evaluation, richer costs, and PPO. These are extensions, not part of the experiment currently being run.
+## Historical AAPL experiment
+
+AAPL was the earlier single-asset prototype, with its own snapshot, models, and protocol. It remains separate from QQQ. On its 2023-01-03 to 2026-10-02 test at seed 42/10 bps, primary lambda 2 returned −0.76% with 2 active intervals, reference lambda 0 returned −17.42%, and buy and hold returned +159.85%. These are historical AAPL results, not QQQ measurements or a controlled cross-asset ranking.
+
+AAPL protocol: `5fbce9eb3c97815487c57b7eaca4502390562e37ed062609d72c87ba189ec18b`; calculation revision `b6c550d`; archive `outputs/stage-4/aapl-reproduction.tar.gz`. Original detailed tables remain in the AAPL archive. See [historical reproduction](08-reproduction.md#historical-aapl-reproduction).
 
 ## Verification evidence
 
-- The locked AAPL revision passed 175 tests; the current main branch suite has 191 tests. Synthetic tests do not need Yahoo.
-- Audit of 60 terminal events: equity/cash/holdings reconciliation, terminal fees, and coverage matched.
-- Sum of net trade P&L matched account P&L; the largest difference was about 6.26 × 10^-10 USD.
-- Cash matched exactly at all three costs; buy and hold had exactly two orders.
-- The two seed-42 checkpoints were byte-identical to the source; an audit of 30 RL scenarios confirmed Q/visits remained unchanged and read-only.
-- Independent verification of 60 scenarios matched decisions, transitions, Parquet tables, metrics, and diagnostics.
-- A clean environment with the relocated exact snapshot also replayed 60/60; the generated report matched byte-for-byte.
-- Desktop FinPlot, offscreen seed views, and PNG output rendered successfully in a clean checkout.
+The implementation and clean checkout each passed 206 tests. Independent local replay and relocated clean-environment replay each matched 60/60 scenarios. Account/trade/fee reconciliation, frozen Q/visits, seed-42 checkpoint copies, and offscreen charts were checked. See the [verification record](qqq-verification.md) for exact hashes, tolerances, archive, and performed checks.
 
-Local evidence includes `audit.json`, `clean_environment_verification.json`, verification directories, and the experiment ledger. The saved results can be read or plotted without rerunning the tests.
-
-**Next:** the [project README](../README.md) links to archive restoration and reproduction instructions.
+**Next:** [reproduction](08-reproduction.md) or the [project README](../README.md).
