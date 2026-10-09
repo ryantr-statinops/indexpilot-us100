@@ -1,8 +1,8 @@
-# IndexPilot US100
+# IndexPilot US100 — Nasdaq-100 via QQQ
 
-A reinforcement learning prototype that simulates **daily AAPL positions** with NumPy tabular Q-learning and an accounting simulator for holdings and cash. The project focuses on understanding agent decisions, reconciling trade accounting, and producing reproducible evaluations.
+A reinforcement learning prototype that simulates **daily QQQ positions as a Nasdaq-100 ETF proxy** with NumPy tabular Q-learning and an accounting simulator for holdings and cash. The project focuses on understanding agent decisions, reconciling trade accounting, and producing reproducible evaluations.
 
-**Current status: all four stages of the AAPL prototype are complete**, covering data, the simulator and baselines, Q-learning, and frozen evaluation. US100 is a planned extension; it is not the universe currently being simulated.
+**Current status: the QQQ experiment is complete**, covering the data snapshot, simulator/baselines, Q-learning with validation selection, frozen evaluation, and independent reproduction. The project trades one simulated asset rather than 100 individual stocks. The earlier AAPL experiment is preserved separately; the repository/package name and CLI names remain unchanged.
 
 ## What the project does
 
@@ -19,13 +19,13 @@ Test period **2023-01-03 to 2026-10-02**, 940 open-to-open intervals; initial eq
 
 | Policy | Net return | Position-active intervals / 940 |
 |---|---:|---:|
-| Primary RL — lambda 2 | −0.76% | 2 |
-| Reference RL — lambda 0 | −17.42% | 760 |
-| Buy and hold | +159.85% | 940 |
+| Primary RL — lambda 0.5 | −1.13% | 15 |
+| Reference RL — lambda 0 | +10.78% | 849 |
+| Buy and hold | +185.10% | 940 |
 
 The primary model is almost always flat; its low drawdown comes with very low exposure. These results do not show that RL beats the baseline or has predictive skill. See [results and interpretation](docs/07-results.md) for validation, seeds, and cost sensitivity.
 
-The current validation suite has **191 passing tests**. The experiment contains **10 models and 60 scenarios**, with account/trade P&L reconciliation, unchanged Q/visit tables during evaluation, and an independent replay in a clean checkout and environment.
+QQQ validation selected lambda 0.5; lambda 2 was fully flat with undefined validation Sharpe. The current validation suite has **206 passing tests**. The experiment contains **10 models and 60 scenarios**, with account/trade P&L reconciliation, unchanged Q/visit tables during evaluation, and an independent replay in a clean checkout and environment.
 
 ## Quickstart
 
@@ -38,16 +38,16 @@ uv sync --python 3.11.16 --frozen --extra dev --extra charts
 **To view the completed experiment:** restore the saved artifacts using the [reproduction guide](docs/08-reproduction.md), then run:
 
 ```bash
-uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
-uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
+uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/qqq-frozen
+uv run indexpilot-chart --run-dir outputs/stage-4/qqq-frozen
 ```
 
-Data, checkpoints, and detailed outputs are not included in a Git clone. The local experiment archive is `outputs/stage-4/aapl-reproduction.tar.gz`; obtain and restore that archive separately. The report and chart commands read saved results; they do not train or reevaluate policies.
+Data, checkpoints, and detailed outputs are not included in a Git clone. The local experiment archive is `outputs/stage-4/qqq-reproduction.tar.gz`; obtain and restore that archive separately. The report and chart commands read saved results; they do not train or reevaluate policies.
 
-To recompute the published AAPL experiment, use a **separate checkout at revision `b6c550d`**, restore the exact snapshot and models as described in the reproduction guide, then run this command from that checkout. The current main branch has been hardened and has a different calculation fingerprint; it can still read and report the old artifacts.
+To recompute the published QQQ experiment, use code compatible with **revision `e2c4cba4f1d51876dad8373d1ffbf41e72050cd0`**, restore the exact snapshot and models as described in the reproduction guide, then run the command below. Documentation-only changes remain compatible; later Python or lockfile changes may require a separate frozen checkout.
 
 ```bash
-uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
+uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/qqq-frozen --data data/qqq/qqq_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
 To start with a new snapshot, see the [full quickstart](docs/02-quickstart.md). A fresh Yahoo download may have different historical adjustments and a different hash; it does not automatically reproduce the old experiment. Synthetic tests can run with `uv run pytest -q` without Yahoo or network access.
@@ -73,10 +73,12 @@ The current agent does not need PyTorch or Gymnasium. pandas is used at the yfin
 - [Results](docs/07-results.md): metrics, activity, stability, and lessons.
 - [Reproduction](docs/08-reproduction.md): archive restoration, hashes, verification, and troubleshooting.
 
+The [QQQ experiment rules](docs/qqq-experiment.md) record pre-test choices; the [verification evidence](docs/qqq-verification.md) records snapshot/protocol/archive hashes and performed checks. [Historical AAPL results](docs/07-results.md#historical-aapl-experiment) and [reproduction](docs/08-reproduction.md#historical-aapl-reproduction) remain available.
+
 The [documentation index](docs/README.md) provides reading paths and chapters on data, the simulator, Q-learning, and evaluation.
 
 ## Limitations and future work
 
 The prototype uses one asset, synthetic adjusted prices, and simple proportional costs. Short positions have no borrow fees, financing, or margin calls. This is an educational simulation, not a live-trading system.
 
-The planned US100 universe is the 100 largest U.S.-listed companies by market capitalization on each formation date; it is not the Nasdaq-100 or S&P 100. Point-in-time membership, multi-asset allocation, walk-forward evaluation, richer costs, and PPO are possible extensions beyond the current prototype.
+QQQ is the single traded proxy for Nasdaq-100; its observed prices reflect ETF distributions, fund costs, and tracking characteristics. The previous plan to select the largest 100 companies has been retired. Further research can examine walk-forward evaluation, independent histories, richer execution costs, and improved state representation.
