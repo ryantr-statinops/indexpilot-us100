@@ -71,11 +71,11 @@ When moving to another machine, the absolute `input_file` path in the protocol m
 ```bash
 uv run indexpilot-evaluate run \
   --protocol-dir outputs/stage-4/aapl-frozen \
-  --data data/raw/aapl_daily_2015-01-01_to-2026-10-06_processed.parquet
+  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
 
 uv run indexpilot-evaluate verify \
   --protocol-dir outputs/stage-4/aapl-frozen \
-  --data data/raw/aapl_daily_2015-01-01_to-2026-10-06_processed.parquet
+  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet
 ```
 
 For a completed archive, `run` checks integrity and returns the artifacts; `verify` actually recomputes 60 scenarios in a new `verification-*` directory and compares them with the saved results. You can run `run` to resume an incomplete experiment; completed scenarios are hash-checked before reuse.
@@ -125,7 +125,7 @@ To create a protocol with the hardened code, use a **separate main checkout**, r
 
 ```bash
 uv run indexpilot-evaluate prepare \
-  --data data/raw/aapl_daily_2015-01-01_to-2026-10-06_processed.parquet \
+  --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet \
   --source-run outputs/stage-3/aapl-default \
   --config configs/stage-4.toml \
   --output-dir outputs/stage-4/aapl-reprepared \
