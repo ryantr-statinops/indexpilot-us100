@@ -50,3 +50,12 @@ def test_changed_source_aborts_publication(tmp_path,monkeypatch,name):
         prepare_protocol(data,source,replace(config,seeds=(42,)),output)
     assert not output.exists()
     assert not list(tmp_path.glob('.prepare-*'))
+
+
+def test_protocol_records_instrument_label(tmp_path):
+    from dataclasses import replace
+    data, source, config = source_fixture(tmp_path)
+    root = tmp_path / "labeled"
+    protocol = prepare_protocol(data, source, replace(config, instrument_label="QQQ / Nasdaq-100 ETF"), root)
+    assert protocol["evaluation_config"]["instrument_label"] == "QQQ / Nasdaq-100 ETF"
+    assert validate_protocol(root)["evaluation_config"]["instrument_label"] == "QQQ / Nasdaq-100 ETF"

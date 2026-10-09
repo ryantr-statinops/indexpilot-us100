@@ -19,7 +19,15 @@ class EvaluationConfig:
     primary_cost_bps: float = 10.0
     costs_bps: tuple[float, ...] = (0.0, 10.0, 20.0)
 
+    instrument_label: str | None = None
+
     def __post_init__(self) -> None:
+        if self.instrument_label is not None and (
+            not isinstance(self.instrument_label, str)
+            or not self.instrument_label.strip()
+            or any(character in self.instrument_label for character in "\r\n")
+        ):
+            raise ValueError("instrument_label must be a nonblank single-line string or None")
         if not isinstance(self.source_run, str) or not self.source_run:
             raise ValueError("source_run must be a nonempty path")
         try:
