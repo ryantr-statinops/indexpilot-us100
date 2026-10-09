@@ -1,147 +1,147 @@
-# 05 — Q-learning trong dự án
+# 05 — Q-learning in the Project
 
-## Mục lục
+## Contents
 
-- [MDP và observation](#mdp-và-observation)
-- [State bins và actions](#state-bins-và-actions)
-- [Q table và chọn action](#q-table-và-chọn-action)
+- [MDP and observation](#mdp-and-observation)
+- [State bins and actions](#state-bins-and-actions)
+- [Q table and action selection](#q-table-and-action-selection)
 - [Bellman update](#bellman-update)
-- [Training sau rollout](#training-sau-rollout)
-- [Validation và checkpoint](#validation-và-checkpoint)
+- [Training after rollout](#training-after-rollout)
+- [Validation and checkpoint](#validation-and-checkpoint)
 
-## MDP và observation
+## MDP and observation
 
-Q-learning học giá trị reward tương lai của từng action tại từng state. Nó không dự báo trực tiếp giá AAPL hoặc fit một mô hình supervised return prediction.
+Q-learning learns the future reward value of each action in each state. It does not directly predict AAPL prices or fit a supervised return-prediction model.
 
-| Thành phần | Trong dự án |
+| Component | In this project |
 |---|---|
-| Agent | QLearningAgent chọn target exposure |
-| Environment | Lịch sử AAPL và tài khoản holdings/cash |
-| Observation | Lagged market features, cash, holdings, equity, exposure, drawdown |
-| State | Sáu features được chuyển thành một integer bằng bins cố định |
-| Action | Một trong năm signed exposure targets |
-| Transition | Simulator execute action và tiến sang open tiếp theo |
+| Agent | `QLearningAgent` selects a target exposure |
+| Environment | AAPL history and an account with holdings/cash |
+| Observation | Lagged market features, cash, holdings, equity, exposure, and drawdown |
+| State | Six features converted to an integer with fixed bins |
+| Action | One of five signed exposure targets |
+| Transition | Simulator executes the action and advances to the next open |
 | Reward | Gross return − lambda × risk − cost fraction |
-| Terminal | Hết segment hoặc insolvent, có liquidation |
+| Terminal | Segment ends or the account becomes insolvent, with liquidation |
 
-TradingEnvironment là adapter theo episode trên [simulator](04-simulator.md). Nó tạo trajectory gồm SimulationResult và finalized transitions; không có accounting engine thứ hai.
+`TradingEnvironment` is an episode adapter around the [simulator](04-simulator.md). It creates a trajectory containing a `SimulationResult` and finalized transitions; it does not implement a second accounting engine.
 
-Market features chỉ dùng lịch sử trước decision session. Account được mark ở current open; next open không nằm trong observation. Date/index không thuộc learned state.
+Market features use only history before the decision session. The account is marked at the current open; the next open is not part of the observation. Date/index is not part of the learned state.
 
-## State bins và actions
+## State bins and actions
 
 | Feature | Bin edges |
 |---|---|
-| Lagged adjusted-close return 1 phiên | −0,02; 0; 0,02 |
-| Return 5 phiên | −0,05; 0; 0,05 |
-| Return 20 phiên | −0,1; 0; 0,1 |
-| Causal open-return volatility | 0,01; 0,02; 0,04 |
-| Current marked exposure | −0,75; −0,25; 0,25; 0,75 |
-| Portfolio drawdown | 0,1; 0,25 |
+| One-session lagged adjusted-close return | −0.02; 0; 0.02 |
+| Five-session return | −0.05; 0; 0.05 |
+| 20-session return | −0.1; 0; 0.1 |
+| Causal open-return volatility | 0.01; 0.02; 0.04 |
+| Current marked exposure | −0.75; −0.25; 0.25; 0.75 |
+| Portfolio drawdown | 0.1; 0.25 |
 
-Có bins ở hai đầu ngoài ngưỡng: 4 × 4 × 4 × 4 × 5 × 3 = **3.840 states**. Code dùng searchsorted(side="right") rồi ravel_multi_index. Giá trị đúng ngưỡng nằm ở bin bên phải.
+Each dimension has bins beyond both outer thresholds: 4 × 4 × 4 × 4 × 5 × 3 = **3,840 states**. The code uses `searchsorted(side="right")` and then `ravel_multi_index`. A value exactly on a threshold goes into the bin to its right.
 
-Ví dụ return_1 = +0,01 thuộc khoảng [0;0,02); return_1 = 0,02 thuộc bin từ 0,02 trở lên. Exposure là tỷ trọng mark thực tế trước action, không phải target cuối cùng từng được đặt.
+For example, `return_1 = +0.01` is in [0, 0.02); `return_1 = 0.02` is in the bin starting at 0.02. Exposure is the actual marked fraction before the action, not the last target that was set.
 
 | Action ID | Target |
 |---:|---:|
 | 0 | −1 |
-| 1 | −0,5 |
+| 1 | −0.5 |
 | 2 | 0 |
-| 3 | +0,5 |
+| 3 | +0.5 |
 | 4 | +1 |
 
-Features/bins cố định trong [state.py](../src/indexpilot_us100/agents/state.py). Không fit thresholds/scaler bằng validation/test. Cùng một state có thể gom nhiều market/account situations; cách biểu diễn này xấp xỉ, không chứng minh quá trình giá là Markov.
+Features/bins are fixed in [state.py](../src/indexpilot_us100/agents/state.py). Thresholds/scalers are not fit on validation/test data. A state may combine distinct market/account situations; this representation is an approximation and does not prove that the price process is Markov.
 
-## Q table và chọn action
+## Q table and action selection
 
-Q có shape (3840,5), float64; visits cùng shape, int64. Ban đầu Q bằng 0.
+Q has shape (3840, 5), dtype float64; the visit-count array has the same shape and dtype int64. Q starts at zero.
 
-Epsilon-greedy:
+Epsilon-greedy selection:
 
-- Với xác suất epsilon: chọn ngẫu nhiên một action ID.
-- Phần còn lại: chọn action có Q lớn nhất.
-- Khi tie: ưu tiên flat, small long, small short, full long, full short.
+- With probability epsilon, choose a random action ID.
+- Otherwise, choose the action with the largest Q value.
+- On a tie, prefer flat, small long, small short, full long, then full short.
 
-Unvisited states có Q bằng 0 nên greedy fallback là flat. Trong evaluation epsilon = 0, Q/visits chỉ đọc. RNG vẫn được reset nhưng không exploration.
+Unvisited states have Q = 0, so the greedy fallback is flat. During evaluation epsilon is 0 and Q/visits are read-only. The RNG is still reset, but there is no exploration.
 
-Ví dụ một hàng Q theo action IDs:
+Example row of Q values by action ID:
 
 ```text
-Q[state] = [-0,03; -0,01; 0; 0,02; 0,01]
-greedy action = ID 3 → target +0,5
+Q[state] = [-0.03; -0.01; 0; 0.02; 0.01]
+greedy action = ID 3 → target +0.5
 ```
 
 ## Bellman update
 
 ```text
-Nếu nonterminal:
+If nonterminal:
     target = reward + gamma * max(Q[next_state])
-Nếu terminal:
+If terminal:
     target = reward
 
 Q[state, action] += alpha * (target - Q[state, action])
 visits[state, action] += 1
 ```
 
-Gamma chiết khấu reward theo intervals, không chiết khấu cash/equity.
+Gamma discounts reward across intervals; it does not discount cash/equity.
 
-Ví dụ alpha = 0,5, gamma = 0,9, Q hiện tại = 0, reward = 1, max Q[next] = 2:
+Example: alpha = 0.5, gamma = 0.9, current Q = 0, reward = 1, max Q[next] = 2:
 
 ```text
-target = 1 + 0,9*2 = 2,8
-Q mới = 0 + 0,5*(2,8-0) = 1,4
+target = 1 + 0.9*2 = 2.8
+new Q = 0 + 0.5*(2.8-0) = 1.4
 ```
 
-Nếu update tiếp theo là terminal với reward = 1:
+If the next update is terminal with reward = 1:
 
 ```text
 target = 1
-Q mới = 1,4 + 0,5*(1-1,4) = 1,2
+new Q = 1.4 + 0.5*(1-1.4) = 1.2
 ```
 
-Terminal không bootstrap từ một next state giả.
+A terminal transition does not bootstrap from a fictitious next state.
 
-## Training sau rollout
+## Training after rollout
 
-Dự án dùng **off-policy Q-learning cập nhật sau mỗi rollout**:
+The project uses **off-policy Q-learning updates after each rollout**:
 
-1. Reset account flat; reset policy RNG bằng seed + episode index.
-2. Đặt epsilon cho episode; giữ Q đã học ở các episode trước.
-3. Rollout trọn training segment với Q không cập nhật trong rollout.
-4. Simulator finalize terminal fees và accounting.
-5. Duyệt transitions theo thứ tự thời gian để update Q.
-6. Lặp lại cùng training segment cho episode tiếp theo.
+1. Reset the account to flat; reset the policy RNG with seed + episode index.
+2. Set epsilon for the episode; retain Q learned in previous episodes.
+3. Roll out the full training segment while Q remains unchanged during that rollout.
+4. The simulator finalizes terminal fees and accounting.
+5. Process transitions in chronological order to update Q.
+6. Repeat the same training segment in the next episode.
 
-Cách này bảo đảm reward cuối đã bao gồm liquidation; một quyết định không execute được trong closing-fee insolvency không tạo financial interval/transition giả.
+This ensures the final reward includes liquidation; a decision that cannot execute because of closing-fee insolvency does not create a fictitious financial interval/transition.
 
-Settings trong [stage-3.toml](../configs/stage-3.toml):
+Settings in [stage-3.toml](../configs/stage-3.toml):
 
-| Setting | Giá trị |
+| Setting | Value |
 |---|---:|
-| Episodes/model | 100 |
-| Alpha | 0,1 |
-| Gamma | 0,99 |
+| Episodes per model | 100 |
+| Alpha | 0.1 |
+| Gamma | 0.99 |
 | Epsilon start | 1 |
-| Epsilon decay | 0,97 |
-| Epsilon floor | 0,05 |
-| Seed chính | 42 |
-| Phí training | 10 bps |
-| Lambda validation grid | 0; 0,5; 1; 2 |
+| Epsilon decay | 0.97 |
+| Epsilon floor | 0.05 |
+| Primary seed | 42 |
+| Training fees | 10 bps |
+| Validation lambda grid | 0; 0.5; 1; 2 |
 
-Epsilon của episode e, đếm từ 0, là max(0,05; 1 × 0,97^e). Các episode là nhiều lượt học trên **cùng lịch sử**, không phải 100 independent market samples.
+Epsilon for episode e, starting at 0, is `max(0.05; 1 × 0.97^e)`. Episodes are repeated learning passes over the **same history**, not 100 independent market samples.
 
-Exploratory training reward, greedy train và greedy validation được lưu riêng. Performance tốt trên lịch sử được lặp lại không chứng minh generalization.
+Exploratory training reward, greedy training, and greedy validation are saved separately. Strong performance on repeated historical data does not prove generalization.
 
-## Validation và checkpoint
+## Validation and checkpoint
 
-Training dùng dữ liệu đến hết 2020. Validation 2021–2022 reset account và evaluate greedy; không update Q/visits. Chọn lambda có Sharpe validation hữu hạn cao nhất; bỏ insolvent. Ties giữ thứ tự grid. Nếu tất cả undefined, fallback lambda 0 và ghi status rõ ràng.
+Training uses data through 2020. Validation on 2021–2022 resets the account and evaluates greedily; it does not update Q/visits. The selected lambda has the highest finite validation Sharpe; insolvent runs are excluded. Ties retain the grid order. If all values are undefined, lambda 0 is the fallback and the status is recorded.
 
-Lambda 2 được chọn trên snapshot đã khóa. Validation có một trade và 99,8% flat decisions, nên phải đọc Sharpe cùng mức hoạt động. Test từ 2023 đánh giá lựa chọn này; không dùng test đổi bins, lambda hoặc seed.
+Lambda 2 was selected on the locked snapshot. Validation had one trade and 99.8% flat decisions, so its Sharpe must be read alongside activity. The test from 2023 evaluates this choice; it is not used to change bins, lambda, or seed.
 
-Checkpoint NPZ chứa Q, visits và versioned feature/bin/action metadata. Load không dùng pickle và kiểm tra shape/dtype/finite/state compatibility. Learning settings cần lấy từ manifest/protocol; NPZ không chứa đủ config để tự suy ra cách training.
+The NPZ checkpoint contains Q, visits, and versioned feature/bin/action metadata. Loading does not use pickle and checks shape/dtype/finite values/state compatibility. Learning settings must come from the manifest/protocol; the NPZ does not contain enough configuration to infer the training setup.
 
-Artifacts learning local:
+Local learning artifacts:
 
 ```text
 run_manifest.json
@@ -157,6 +157,6 @@ lambda_2/
     validation_transitions.parquet
 ```
 
-Các thư mục lambda khác có cùng cấu trúc. selection.json của source vẫn ghi test_evaluated=false vì learning run chỉ train/validate; final evaluation có protocol/manifest riêng.
+Other lambda directories have the same structure. The source run's `selection.json` still records `test_evaluated=false` because a learning run only trains/validates; final evaluation has a separate protocol/manifest.
 
-**Đọc tiếp:** [README dự án](../README.md) dẫn tới frozen evaluation và kết quả thực tế.
+**Next:** the [project README](../README.md) links to frozen evaluation and the results.
