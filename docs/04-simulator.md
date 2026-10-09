@@ -20,7 +20,7 @@ equity = C + q * P
 exposure = q * P / equity         # only when equity > 0
 ```
 
-Positive q is long; negative q is short. The simulator uses float64 and fractional units; it has no lot rounding, cash interest, financing, borrow fee, or margin call.
+For the current QQQ experiment, holdings are synthetic units on the adjusted-price series, rather than unadjusted ETF shares with separate distribution credits. Positive q is long; negative q is short. The simulator uses float64 and fractional units; it has no lot rounding, cash interest, financing, borrow fee, or margin call.
 
 A short sale increases cash but does not create profit by itself. Example without fees: with $10,000 of equity, shorting 100 units at $100 gives $20,000 cash and a −$10,000 position; equity remains $10,000. If the price rises to $110, equity falls to $9,000 and exposure is about −122.22%.
 
@@ -170,7 +170,7 @@ Example of reading saved results without rerunning the policy:
 ```python
 import polars as pl
 
-root = "outputs/stage-2/aapl-default/buy_hold"
+root = "outputs/stage-2/qqq-default/buy_hold"
 print(pl.read_parquet(f"{root}/orders.parquet"))
 print(pl.read_parquet(f"{root}/trades.parquet"))
 ```
