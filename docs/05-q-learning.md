@@ -11,12 +11,12 @@
 
 ## MDP and observation
 
-Q-learning learns the future reward value of each action in each state. It does not directly predict AAPL prices or fit a supervised return-prediction model.
+Q-learning learns the future reward value of each action in each state. It does not directly predict QQQ prices or fit a supervised return-prediction model.
 
 | Component | In this project |
 |---|---|
 | Agent | `QLearningAgent` selects a target exposure |
-| Environment | AAPL history and an account with holdings/cash |
+| Environment | QQQ history and an account with holdings/cash |
 | Observation | Lagged market features, cash, holdings, equity, exposure, and drawdown |
 | State | Six features converted to an integer with fixed bins |
 | Action | One of five signed exposure targets |
@@ -137,18 +137,18 @@ Exploratory training reward, greedy training, and greedy validation are saved se
 
 Training uses data through 2020. Validation on 2021–2022 resets the account and evaluates greedily; it does not update Q/visits. The selected lambda has the highest finite validation Sharpe; insolvent runs are excluded. Ties retain the grid order. If all values are undefined, lambda 0 is the fallback and the status is recorded.
 
-Lambda 2 was selected on the locked snapshot. Validation had one trade and 99.8% flat decisions, so its Sharpe must be read alongside activity. The test from 2023 evaluates this choice; it is not used to change bins, lambda, or seed.
+Lambda 0.5 was selected on the locked QQQ snapshot, with validation Sharpe about 0.545, 17 closed trades, and 96.02% flat decisions. Its validation return was +3.58%; Sharpe must still be read alongside activity. Lambda 2 was entirely flat and had undefined Sharpe. The QQQ reference is lambda 0 under the [predeclared rules](qqq-experiment.md); the historical AAPL choice of lambda 2 is not reused. The test from 2023 evaluates this choice; it is not used to change bins, lambda, or seed.
 
 The NPZ checkpoint contains Q, visits, and versioned feature/bin/action metadata. Loading does not use pickle and checks shape/dtype/finite values/state compatibility. Learning settings must come from the manifest/protocol; the NPZ does not contain enough configuration to infer the training setup.
 
-Local learning artifacts:
+The QQQ learning run is `outputs/stage-3/qqq-default`. Local learning artifacts:
 
 ```text
 run_manifest.json
 selection.json
 validation_summary.csv/json
 diagnostics.json
-lambda_2/
+lambda_0_5/
     model.npz
     training.csv
     train_greedy/
