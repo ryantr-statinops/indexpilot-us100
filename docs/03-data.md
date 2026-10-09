@@ -119,7 +119,7 @@ uv run indexpilot-inspect data/new-snapshot/qqq_daily_2015-01-01_to_2026-10-06_p
 The downloader's default end is the current UTC date, exclusive. To reprocess an archived raw CSV:
 
 ```bash
-uv run indexpilot-process data/qqq/qqq_daily_2015-01-01_to_2026-10-06_raw.csv --output data/reprocessed/aapl.parquet
+uv run indexpilot-process data/qqq/qqq_daily_2015-01-01_to_2026-10-06_raw.csv --output data/reprocessed/qqq.parquet
 ```
 
 Reprocessing does not need Yahoo or network access. Check the Parquet hash if you intend to use it for exact reproduction; do not assume that an equivalent table has identical bytes.
