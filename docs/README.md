@@ -1,57 +1,57 @@
-# Tài liệu IndexPilot US100
+# IndexPilot US100 Documentation
 
-Bộ tài liệu mô tả **prototype AAPL đã hoàn thành**: từ snapshot giá đến simulator, Q-learning, frozen test và tái lập. Nội dung được tổ chức theo cách dùng/đọc dự án; không cần đi qua lịch sử triển khai để hiểu cơ chế.
+This documentation describes the **completed AAPL prototype**, from the price snapshot through the simulator, Q-learning, frozen test, and reproduction workflow. It is organized around how to use and understand the project; you do not need to read its implementation history to understand how it works.
 
-## Mục lục
+## Contents
 
-- [Bắt đầu ở đâu](#bắt-đầu-ở-đâu)
-- [Các chương](#các-chương)
-- [Hai lộ trình đọc](#hai-lộ-trình-đọc)
-- [Phân biệt tài liệu và artifacts](#phân-biệt-tài-liệu-và-artifacts)
+- [Where to start](#where-to-start)
+- [Chapters](#chapters)
+- [Two reading paths](#two-reading-paths)
+- [Documentation and artifacts](#documentation-and-artifacts)
 
-## Bắt đầu ở đâu
+## Where to start
 
-- Muốn hiểu dự án làm gì: [01 — Tổng quan](01-overview.md).
-- Muốn chạy hoặc xem kết quả: [02 — Quickstart](02-quickstart.md).
-- Muốn biết RL đã học được gì: [07 — Kết quả](07-results.md).
-- Muốn replay đúng experiment: [08 — Tái lập](08-reproduction.md).
+- To understand the project: [01 — Overview](01-overview.md).
+- To run it or view results: [02 — Quickstart](02-quickstart.md).
+- To see what the RL agent learned: [07 — Results](07-results.md).
+- To replay the exact experiment: [08 — Reproduction](08-reproduction.md).
 
-Ví dụ nếu chỉ muốn xem equity/drawdown, restore saved artifacts rồi dùng indexpilot-chart. Nếu muốn kiểm tra kết quả thật sự lặp lại được, restore thêm exact snapshot/models và dùng indexpilot-evaluate verify. Hai mục đích có prerequisites khác nhau.
+For example, if you only want to view equity and drawdown, restore the saved artifacts and use `indexpilot-chart`. To check whether the results can actually be reproduced, also restore the exact snapshot and models, then use `indexpilot-evaluate verify`. These tasks have different prerequisites.
 
-## Các chương
+## Chapters
 
-| Chương | Nội dung chính |
+| Chapter | Main topics |
 |---|---|
-| [01 — Tổng quan](01-overview.md) | Phạm vi AAPL/US100, stack và kiến trúc |
-| [02 — Quickstart](02-quickstart.md) | Setup, commands, archived experiment và snapshot mới |
-| [03 — Dữ liệu](03-data.md) | Giá điều chỉnh, quality checks, causal features, hash/splits |
-| [04 — Simulator](04-simulator.md) | Account, target sau phí, reward, baselines, trades/metrics |
-| [05 — Q-learning](05-q-learning.md) | State bins, actions, Bellman update, training/selection |
-| [06 — Evaluation](06-evaluation.md) | Locked protocol, 60 scenarios, diagnostics/resume/verify |
-| [07 — Kết quả](07-results.md) | Validation/test, activity, seeds/costs và giới hạn |
-| [08 — Tái lập](08-reproduction.md) | Restore archive, runtime/hashes, report/chart và lỗi |
+| [01 — Overview](01-overview.md) | AAPL/US100 scope, stack, and architecture |
+| [02 — Quickstart](02-quickstart.md) | Setup, commands, archived experiment, and new snapshots |
+| [03 — Data](03-data.md) | Adjusted prices, quality checks, causal features, hashes, and splits |
+| [04 — Simulator](04-simulator.md) | Account, post-fee targets, reward, baselines, trades, and metrics |
+| [05 — Q-learning](05-q-learning.md) | State bins, actions, Bellman update, training, and selection |
+| [06 — Evaluation](06-evaluation.md) | Locked protocol, 60 scenarios, diagnostics, resume, and verification |
+| [07 — Results](07-results.md) | Validation/test results, activity, seeds, costs, and limitations |
+| [08 — Reproduction](08-reproduction.md) | Archive restore, runtime/hashes, report/chart, and troubleshooting |
 
-## Hai lộ trình đọc
+## Two reading paths
 
-### Hiểu dự án
+### Understand the project
 
 [01](01-overview.md) → [03](03-data.md) → [04](04-simulator.md) → [05](05-q-learning.md) → [06](06-evaluation.md) → [07](07-results.md).
 
-Đi theo luồng: dữ liệu có từ lúc nào → tiền và vị thế thay đổi thế nào → agent học bằng gì → test được giữ riêng thế nào → kết quả có ý nghĩa gì.
+Follow the data timeline, how cash and positions change, how the agent learns, how the test is kept separate, and what the results mean.
 
-### Chạy dự án
+### Run the project
 
-[02](02-quickstart.md) → [08](08-reproduction.md), rồi [07](07-results.md) để đối chiếu và diễn giải.
+[02](02-quickstart.md) → [08](08-reproduction.md), then [07](07-results.md) to compare and interpret the results.
 
-Với fresh download, xem [03](03-data.md) và chỉ gọi đó là snapshot mới. Với exact reproduction, dùng archive có hash đã khóa. Git clone không chứa market data hoặc checkpoints.
+For a fresh download, read [03](03-data.md) and treat it as a new snapshot. For exact reproduction, use the archive with the recorded hash. A Git clone does not contain market data or checkpoints.
 
-## Phân biệt tài liệu và artifacts
+## Documentation and artifacts
 
-- Docs giải thích cơ chế và chọn các bảng giúp hiểu kết quả.
-- Configs là tham số thực tế version-controlled.
-- Data/manifests/checkpoints/detailed outputs nằm local, ngoài Git.
-- Generated report.md, CSV/JSON, Parquet và PNG được sinh từ artifacts; không thay thế input cần cho verify.
+- The docs explain the mechanisms and select tables that help interpret results.
+- Config files are version-controlled parameters.
+- Data, manifests, checkpoints, and detailed outputs are stored locally, outside Git.
+- Generated reports, CSV/JSON, Parquet, and PNG files are created from artifacts; they do not replace the inputs needed for verification.
 
-Vốn/fees/reward/metrics có định nghĩa trong [simulator](04-simulator.md); source of truth về protocol là frozen protocol.json đã lưu. Khi tiếp tục nghiên cứu, tạo experiment riêng có lý do rõ ràng thay vì đổi lựa chọn sau khi xem test đã công bố.
+Capital, fees, reward, and metrics are defined in the [simulator chapter](04-simulator.md); the saved frozen `protocol.json` is the source of truth for the protocol. For further research, create a separate experiment with a clear reason instead of changing choices after seeing the published test.
 
-**Đọc tiếp:** [01 — Tổng quan](01-overview.md) hoặc [02 — Quickstart](02-quickstart.md). [README dự án](../README.md) là trang giới thiệu ở root.
+**Next:** [01 — Overview](01-overview.md) or [02 — Quickstart](02-quickstart.md). The root [project README](../README.md) is the introduction.
