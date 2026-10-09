@@ -1,53 +1,53 @@
-# 06 — Frozen evaluation
+# 06 — Frozen Evaluation
 
-## Mục lục
+## Contents
 
-- [Vì sao phải khóa protocol](#vì-sao-phải-khóa-protocol)
-- [Các quyết định cố định](#các-quyết-định-cố-định)
-- [Prepare, run, verify và report](#prepare-run-verify-và-report)
-- [Resume và tính toàn vẹn](#resume-và-tính-toàn-vẹn)
-- [Diagnostics và tổng hợp](#diagnostics-và-tổng-hợp)
-- [Artifacts và biểu đồ](#artifacts-và-biểu-đồ)
+- [Why lock the protocol](#why-lock-the-protocol)
+- [Fixed decisions](#fixed-decisions)
+- [Prepare, run, verify, and report](#prepare-run-verify-and-report)
+- [Resume and integrity](#resume-and-integrity)
+- [Diagnostics and summaries](#diagnostics-and-summaries)
+- [Artifacts and charts](#artifacts-and-charts)
 
-## Vì sao phải khóa protocol
+## Why lock the protocol
 
-Validation đã dùng chọn lambda. Nếu xem test rồi chọn seed, lambda hoặc mức phí cho kết quả đẹp nhất, test cũng trở thành dữ liệu lựa chọn.
+Validation was used to select lambda. If the test is used to choose a seed, lambda, or fee level that gives a better result, the test becomes selection data too.
 
-Protocol ghi lựa chọn và inventory **trước lần đánh giá test đầu**. Thành công của experiment là đánh giá đúng cấu hình đã chốt, kể cả RL thua baseline. Tất cả policies dùng [cùng simulator và metrics](04-simulator.md).
+The protocol records the choices and model inventory **before the first test evaluation**. The experiment succeeds by evaluating the predeclared configuration correctly, even if RL loses to a baseline. All policies use the [same simulator and metrics](04-simulator.md).
 
-## Các quyết định cố định
+## Fixed decisions
 
-| Nội dung | Quyết định |
+| Item | Decision |
 |---|---|
-| Primary | Checkpoint lambda 2, seed 42 từ learning run |
-| Reference | Checkpoint lambda 0, seed 42 |
-| Training / validation | Giữ nguyên đoạn đến hết 2020 / 2021–2022 |
-| Test khai báo | 2023-01-01 → 2026-10-02 |
-| Test thực tế | 2023-01-03 → 2026-10-02, 940 intervals |
-| Snapshot | Đúng SHA256 đã dùng khi training |
+| Primary | Lambda 2, seed 42 checkpoint from the learning run |
+| Reference | Lambda 0, seed 42 checkpoint |
+| Training / validation | Preserve the segment through 2020 / 2021–2022 |
+| Declared test | 2023-01-01 to 2026-10-02 |
+| Actual test | 2023-01-03 to 2026-10-02, 940 intervals |
+| Snapshot | Exact SHA256 used during training |
 | Seeds | 42, 7, 21, 84, 123 |
-| Cost scenarios | 0/10/20 bps; chính luôn 10 bps |
-| Mỗi run | Reset flat/$100.000; greedy epsilon 0 |
-| Model updates | Q/visits chỉ đọc, không training trong evaluation |
+| Cost scenarios | 0/10/20 bps; primary always uses 10 bps |
+| Each run | Reset flat/$100,000; greedy with epsilon 0 |
+| Model updates | Q/visits are read-only; no training during evaluation |
 
-Hai model seed 42 được copy byte-for-byte, không train lại trên validation. Tám model bổ sung là bốn seeds × hai lambda; mỗi model train 100 episodes trên training cũ, cùng bins/settings. Không validate để chọn lại lambda cho từng seed.
+The two seed-42 models are copied byte-for-byte, not retrained on validation. The eight additional models are four seeds × two lambdas; each is trained for 100 episodes on the original training segment, with the same bins/settings. Lambda is not reselected per seed using validation.
 
-Matrix:
+Scenario matrix:
 
-| Nhóm | Số run |
+| Group | Run count |
 |---|---:|
 | RL: 5 seeds × 2 lambdas × 3 costs | 30 |
-| Baseline xác định: 5 policies × 3 costs | 15 |
+| Deterministic baselines: 5 policies × 3 costs | 15 |
 | Random: 5 seeds × 3 costs | 15 |
-| Tổng | 60 |
+| Total | 60 |
 
-Baseline xác định chạy một lần mỗi cost; không nhân bản thành năm independent samples. Baseline reward dùng lambda 2; finances giữ nguyên engine. Không dùng reward để so P&L giữa hai lambda.
+Each deterministic baseline runs once per cost; it is not replicated as five independent samples. Baseline reward uses lambda 2; its financial accounting uses the same engine. Reward is not used to compare P&L between two lambdas.
 
-Primary table gồm tám dòng: hai RL và sáu baselines, seed 42/10 bps. Other seeds mô tả variability, không thay primary.
+The primary table has eight rows: two RL policies and six baselines at seed 42/10 bps. Other seeds describe variability; they do not replace the primary result.
 
-## Prepare, run, verify và report
+## Prepare, run, verify, and report
 
-Các lệnh dưới đây dùng archived snapshot và source learning run đã có. Output prepare phải là thư mục mới:
+The commands below use the archived snapshot and existing source learning run. The prepare output directory must be new:
 
 ```bash
 uv run indexpilot-evaluate prepare --data data/raw/aapl_daily_2015-01-01_to_2026-10-06_processed.parquet --source-run outputs/stage-3/aapl-default --config configs/stage-4.toml --output-dir outputs/stage-4/aapl-frozen
@@ -56,69 +56,69 @@ uv run indexpilot-evaluate verify --protocol-dir outputs/stage-4/aapl-frozen
 uv run indexpilot-evaluate report --protocol-dir outputs/stage-4/aapl-frozen
 ```
 
-| Command | Công việc |
+| Command | Work performed |
 |---|---|
-| prepare | Validate source manifest/selection/state metadata/data hash; chuẩn bị 10 models; lưu protocol ID và hashes |
-| run | Recheck frozen inputs/runtime, slice causal test, evaluate 60 scenarios và export |
-| verify | Tính lại trong verification directory riêng; đối chiếu số liệu/decisions/artifacts |
-| report | Đọc artifacts đã kiểm tra, sinh report.md; không evaluate hoặc train |
+| `prepare` | Validate source manifest/selection/state metadata/data hash; prepare 10 models; save protocol ID and hashes |
+| `run` | Recheck frozen inputs/runtime, slice causal test, evaluate 60 scenarios, and export results |
+| `verify` | Recompute in a separate verification directory; compare data/decisions/artifacts |
+| `report` | Read saved artifacts and generate `report.md`; does not evaluate or train |
 
-Prepare khóa expected data hash từ source đã validate, kiểm tra trước/sau load và trước publication. Source manifest, selection, primary checkpoints và training logs cũng được đối chiếu để phát hiện thay đổi giữa quá trình train/copy. Input đổi thì abort và cleanup temporary output, không publish protocol.
+`prepare` locks the expected data hash from the validated source and checks it before/after loading and before publication. It also checks the source manifest, selection, primary checkpoints, and training logs to detect changes during training/copying. If an input changes, preparation aborts and cleans up its temporary output; it does not publish a protocol.
 
-Prepare kiểm tra boundaries và warm-up để khóa intended coverage; chưa rollout trên test. Warm-up lấy thêm max(20,risk_window)+1 dòng trước phiên đầu đủ điều kiện. Không đưa warm-up vào equity curve, không mang vị thế từ validation sang test. Kết thúc tại open cuối; phí liquidation dùng cơ chế interval cuối của simulator.
+`prepare` checks boundaries and warm-up to lock intended coverage; it does not roll out on the test. Warm-up takes `max(20, risk_window)+1` rows before the first eligible session. Warm-up is excluded from the equity curve, and positions are not carried from validation into the test. The run ends at the final open; the simulator handles the liquidation fee in the final interval.
 
-Sensitivity **giữ nguyên Q table**, không bắt buộc cùng actions. Ví dụ phí cao hơn làm equity/drawdown đi sang một state bin khác; cùng Q có thể chọn action khác.
+Cost sensitivity **keeps the same Q table**, but does not require identical actions. For example, higher fees can change equity/drawdown and move the account into another state bin; the same Q table may then select a different action.
 
-## Resume và tính toàn vẹn
+## Resume and integrity
 
-Protocol khóa dataset/source/checkpoint/training-log hashes, cấu hình thực tế, bins/actions, Python/core package versions, uv.lock, Git revision và fingerprints các modules Python của package.
+The protocol locks dataset/source/checkpoint/training-log hashes, effective configuration, bins/actions, Python/core package versions, `uv.lock`, Git revision, and fingerprints of the package's Python modules.
 
-Thay docs không đổi calculation fingerprint. Hardening/refactor Python đã thay fingerprint: protocol AAPL cũ giữ nguyên, replay bằng revision b6c550d trong checkout riêng. Trên main, run/verify dùng protocol mới được chuẩn bị bằng code main; không sửa hashes cũ để bỏ qua kiểm tra. Thay logic Python hoặc lock sẽ bị phát hiện. Numerical runtime phải khớp Python/core packages; platform và optional GUI versions được ghi provenance.
+Changing docs does not change the calculation fingerprint. Subsequent hardening/refactoring of Python changed the fingerprint: the old AAPL protocol remains unchanged and must be replayed with revision `b6c550d` in a separate checkout. On main, run/verify requires a protocol prepared with the main code; do not edit old hashes to bypass checks. Changes to Python logic or the lockfile are detected. The numerical runtime must match Python/core package versions; platform and optional GUI versions are recorded as provenance.
 
-Run bị gián đoạn: chạy lại cùng lệnh. Scenarios đã hoàn tất được kiểm tra hash trước khi tái dùng; chỉ scenarios thiếu mới được tính.
+If a run is interrupted, rerun the same command. Completed scenarios are hash-checked before reuse; only missing scenarios are calculated.
 
-Completed manifest được ghi vào temporary file cùng directory, flush/fsync rồi replace atomic. Crash trước publication không để lại manifest JSON bị cắt; resume reuse scenarios đã hoàn tất và tạo lại summaries. Nếu manifest đã publish nhưng completed ledger event chưa ghi, lần chạy sau kiểm tra manifest và bổ sung event recovered.
+The completed manifest is written to a temporary file in the same directory, flushed/fsynced, then atomically replaced. A crash before publication does not leave a truncated manifest JSON; resuming reuses completed scenarios and regenerates summaries. If the manifest was published but the completion ledger event was not written, the next run checks the manifest and adds a recovered event.
 
-Run hoàn tất: lệnh run kiểm tra summaries, scenario artifacts và protocol, rồi trả kết quả đã lưu. File bị sửa không bị âm thầm ghi đè. Không tự download snapshot hoặc thay checkpoint để vượt lỗi.
+Once a run is complete, the `run` command checks summaries, scenario artifacts, and protocol, then returns the saved results. Edited files are not silently overwritten. The tool does not download a new snapshot or swap a checkpoint to bypass an error.
 
-Experiment ledger tại outputs/stage-4/experiment-ledger.jsonl là append-only hash chain, có process locking. Events gồm prepared, started, scenario_completed, completed, failed và verified. Verify failures có record riêng.
+The experiment ledger at `outputs/stage-4/experiment-ledger.jsonl` is an append-only hash chain with process locking. Events include prepared, started, scenario_completed, completed, failed, and verified. Verification failures receive their own record.
 
-Sau khi đã có test completed trong ledger, prepare protocol mới yêu cầu reason và thư mục mới, ví dụ:
+After a test has been completed and recorded in the ledger, preparing a new protocol requires a reason and a new directory, for example:
 
 ```text
 --output-dir outputs/stage-4/aapl-new-protocol
---reason "Tái dựng archive trong môi trường riêng"
+--reason "Rebuild the inventory in a separate environment"
 ```
 
-Reason ghi lại mục đích experiment mới; không dùng vòng mới để chọn tham số theo test. Verify không tạo vòng lựa chọn mới và không sửa inventory đã khóa.
+The reason records the purpose of the new experiment; do not use another run to select parameters based on the test. Verification does not create a new selection round or modify the locked inventory.
 
-## Diagnostics và tổng hợp
+## Diagnostics and summaries
 
-| Diagnostic | Ý nghĩa |
+| Diagnostic | Meaning |
 |---|---|
-| Action frequencies | Tỷ lệ target −1/−0,5/0/+0,5/+1; HoldPosition riêng |
-| Flat decisions | Target 0, không phải exposure trước lệnh |
-| Active intervals | Holdings sau quyết định khác 0 |
+| Action frequencies | Rates of targets −1/−0.5/0/+0.5/+1; `HoldPosition` is separate |
+| Flat decisions | Target 0, not exposure before the order |
+| Active intervals | Holdings after the decision are nonzero |
 | Gross exposure | abs(units_after × execution_price / equity_before) |
-| Long/short intervals | Dấu holdings sau quyết định |
-| Unseen states | Không có visits nào trong state khi training |
-| Trade duration | Calendar days từ mở đến đóng |
-| Reward breakdown | Tổng gross-return fractions, cost fractions, lambda × risk và reward |
-| Drawdown | Peak/trough/recovery của MDD và longest underwater calendar duration |
+| Long/short intervals | Sign of holdings after the decision |
+| Unseen states | State had no visits during training |
+| Trade duration | Calendar days from opening to closing |
+| Reward breakdown | Totals for gross-return fractions, cost fractions, lambda × risk, and reward |
+| Drawdown | MDD peak/trough/recovery and longest underwater calendar duration |
 
-Nhãn cố định: no_trades; sparse_trades cho 1–4 closed trades; mostly_flat khi flat decisions ≥95%; unseen_states_present; insolvent. Nhãn giúp diễn giải, không thay policy hoặc selection.
+Fixed labels are `no_trades`, `sparse_trades` for 1–4 closed trades, `mostly_flat` when flat decisions ≥95%, `unseen_states_present`, and `insolvent`. Labels help interpretation; they do not change the policy or selection.
 
-Ví dụ target 0 có thể được đặt khi exposure trước quyết định là +0,5: đây là **một action flat để đóng vị thế**, không phải tài khoản đã flat trước đó.
+For example, target 0 can be chosen when pre-decision exposure is +0.5: this is **a flat action that closes the position**, not an account that was already flat.
 
-Seed summaries báo mean/median/sample std/min/max của finite values, kèm số finite/undefined/infinite/not applicable/insolvent. Dưới hai finite values thì std là N/A. Không thay infinity bằng số lớn hoặc bỏ thất bại khỏi báo cáo.
+Seed summaries report mean/median/sample standard deviation/min/max of finite values, along with counts for finite/undefined/infinite/not applicable/insolvent. With fewer than two finite values, standard deviation is N/A. Infinity is not replaced with a large number, and failed runs are not omitted.
 
-Paired comparison lấy lambda 2 − lambda 0 **cùng seed và cost**. Không gộp equity năm seeds thành portfolio. Seed variability đo ngẫu nhiên của việc học trên cùng lịch sử, không phải confidence interval về tương lai thị trường.
+Paired comparison calculates lambda 2 − lambda 0 **for the same seed and cost**. It does not combine the equity curves from five seeds into a portfolio. Seed variability measures randomness in learning from the same history, not a confidence interval for future market results.
 
-Yearly summaries ghi expected_start_date/expected_end_date theo từng năm, lấy từ eligible intervals của test segment trước khi policy chạy. partial_year phản ánh horizon năm chưa đủ hoặc actual coverage không đạt các boundaries dự kiến; run insolvent trong tháng 12 vẫn được nhận diện. Đây không phải xác minh completeness của exchange calendar.
+Yearly summaries record `expected_start_date`/`expected_end_date` by year, taken from eligible intervals in the test segment before policy execution. `partial_year` indicates an incomplete year horizon or actual coverage that misses expected boundaries; insolvency in December is still detected. This does not verify completeness against an exchange calendar.
 
-Yearly summaries giữ **một episode liên tục**. Returns compound theo end_date của interval; fees theo cùng intervals; trades đóng được đếm riêng. Không lấy trade P&L để tính calendar return vì trade có thể qua năm. Insolvent giữ actual coverage và debt, không thêm returns giả đến cuối horizon.
+Yearly summaries use **one continuous episode**. Returns are compounded by interval `end_date`; fees are assigned to the same intervals; closed trades are counted separately. Trade P&L is not used as calendar return because a trade can span multiple years. Insolvency retains actual coverage and debt; no synthetic returns are added through the end of the horizon.
 
-## Artifacts và biểu đồ
+## Artifacts and charts
 
 ```text
 protocol.json
@@ -149,9 +149,9 @@ report.md
 verification-*/
 ```
 
-Score/manifest giữ intended và actual coverage/status; reward được ghi riêng với financial P&L. Completion hashes cho phép check/resume từng scenario.
+Score/manifest files retain intended and actual coverage/status; reward is recorded separately from financial P&L. Completion hashes allow checking/resuming each scenario.
 
-FinPlot đọc artifacts với hai panel equity/drawdown:
+FinPlot reads the artifacts and displays equity/drawdown in two panels:
 
 ```bash
 uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen
@@ -159,6 +159,6 @@ uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --cost-bps 20
 uv run indexpilot-chart --run-dir outputs/stage-4/aapl-frozen --seeds --risk-lambda 2 --cost-bps 10
 ```
 
-Report/chart không train hoặc đánh giá lại policies. Detailed outputs không nằm trong Git; kết quả cần đọc đi kèm archived inputs để replay.
+Report/chart commands do not train or reevaluate policies. Detailed outputs are not in Git; interpret results alongside the archived inputs needed for replay.
 
-**Đọc tiếp:** [README dự án](../README.md) dẫn tới kết quả và hướng dẫn tái lập.
+**Next:** the [project README](../README.md) links to results and reproduction instructions.
