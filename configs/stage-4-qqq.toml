@@ -1,0 +1,10 @@
+source_run = "outputs/stage-3/qqq-default"
+instrument_label = "QQQ / Nasdaq-100 ETF"
+test_start = "2023-01-01"
+test_end = "2026-10-02"
+primary_seed = 42
+seeds = [42, 7, 21, 84, 123]
+primary_lambda = 0.5
+reference_lambda = 0.0
+primary_cost_bps = 10.0
+costs_bps = [0.0, 10.0, 20.0]
