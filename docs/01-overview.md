@@ -1,59 +1,59 @@
-# 01 — Tổng quan dự án
+# 01 — Project Overview
 
-## Mục lục
+## Contents
 
-- [Bài toán và kết quả](#bài-toán-và-kết-quả)
-- [Phạm vi mô phỏng](#phạm-vi-mô-phỏng)
-- [Stack thực tế](#stack-thực-tế)
-- [Kiến trúc và luồng dữ liệu](#kiến-trúc-và-luồng-dữ-liệu)
-- [Cách đọc dự án](#cách-đọc-dự-án)
+- [Problem and results](#problem-and-results)
+- [Simulation scope](#simulation-scope)
+- [Implemented stack](#implemented-stack)
+- [Architecture and data flow](#architecture-and-data-flow)
+- [How to read the project](#how-to-read-the-project)
 
-## Bài toán và kết quả
+## Problem and results
 
-IndexPilot US100 là dự án học reinforcement learning thông qua mô phỏng quyết định vị thế cổ phiếu. Prototype đã hoàn thành dùng **AAPL, dữ liệu daily**: mỗi phiên policy chọn tỷ trọng short, flat hoặc long; simulator tính cash, holdings, phí và equity.
+IndexPilot US100 is a project for learning reinforcement learning through simulated stock-position decisions. The completed prototype uses **daily AAPL data**: each session, a policy chooses a short, flat, or long exposure target, and the simulator tracks cash, holdings, fees, and equity.
 
-Câu hỏi nghiên cứu là: một policy Q-learning học trên lịch sử cũ có giữ được hiệu quả trên dữ liệu về sau, so với các baseline đơn giản không?
+The research question is whether a Q-learning policy trained on older history can retain its performance on later data compared with simple baselines.
 
-Kết quả đã lưu cho thấy model chính gần như luôn flat và không vượt cash hay buy-and-hold trong test. Giá trị của prototype là có thể giải thích từng quyết định, đối soát kế toán và tái lập experiment; hoàn thành dự án không yêu cầu RL có lợi nhuận.
+Saved results show that the primary model is almost always flat and does not beat cash or buy and hold on the test. The prototype's value is its ability to explain each decision, reconcile the accounting, and reproduce the experiment; completion does not require RL to be profitable.
 
-Ví dụ, action +0,5 nghĩa là đưa giá trị vị thế long về 50% equity **sau phí**. Nó không có nghĩa mua thêm 50% vốn mỗi phiên. Action 0 đóng vị thế; −0,5 tạo vị thế short tương đương 50% equity sau phí.
+For example, action +0.5 means setting the long position's value to 50% of equity **after fees**. It does not mean buying 50% of capital on every session. Action 0 closes the position; −0.5 creates a short position equal to 50% of post-fee equity.
 
-## Phạm vi mô phỏng
+## Simulation scope
 
-| Nội dung | Quy ước |
+| Item | Convention |
 |---|---|
-| Tài sản đã triển khai | Một mã AAPL |
-| Tần suất | Daily, giữ từ open hiện tại đến open tiếp theo |
-| Giá giao dịch mô phỏng | Synthetic adjusted open |
-| Tài khoản | Cash và đơn vị tổng hợp, cho phép đơn vị lẻ |
-| Vốn ban đầu | $100.000, flat mỗi episode |
-| Agent | NumPy tabular Q-learning, năm actions |
-| Đánh giá | Training đến hết 2020, validation 2021–2022, test từ 2023 |
-| Prototype hoàn chỉnh | Pipeline, simulator, baselines, agent, frozen evaluation, report/chart |
+| Implemented asset | One ticker: AAPL |
+| Frequency | Daily, held from the current open to the next open |
+| Simulated trading price | Synthetic adjusted open |
+| Account | Cash and synthetic units; fractional units are allowed |
+| Initial capital | $100,000, starting flat in each episode |
+| Agent | NumPy tabular Q-learning with five actions |
+| Evaluation | Training through 2020, validation in 2021–2022, test from 2023 |
+| Completed prototype | Data pipeline, simulator, baselines, agent, frozen evaluation, report, and charts |
 
-**US100** trong tên dự án là hướng mở rộng: 100 công ty niêm yết tại Mỹ lớn nhất theo market capitalization tại từng ngày hình thành universe. Đây không phải Nasdaq-100 hoặc S&P 100. Prototype chưa có dữ liệu membership lịch sử, multi-asset allocation hay agent cho 100 mã.
+**US100** in the project name is a planned extension: the 100 largest U.S.-listed companies by market capitalization on each universe formation date. It is not the Nasdaq-100 or S&P 100. The prototype has no historical membership data, multi-asset allocation, or agent operating over 100 tickers.
 
-Mô hình short chưa có borrow fee, financing, margin call; phí giao dịch là tỷ lệ đơn giản trên traded notional. Chưa có live execution, PPO hoặc walk-forward.
+The short model has no borrow fees, financing, or margin calls; trading fees are a simple rate on traded notional. There is no live execution, PPO, or walk-forward evaluation.
 
-## Stack thực tế
+## Implemented stack
 
-| Vai trò | Công cụ và cách dùng |
+| Role | Technology and use |
 |---|---|
-| Ngôn ngữ | Python; experiment đã khóa dùng 3.11.16 |
-| Số học và agent | NumPy: arrays float64, RNG, Q table và state encoding |
-| Dữ liệu và exports | Polars: CSV, typed Parquet, bảng kết quả |
-| Diagnostic thống kê | statsmodels: Augmented Dickey-Fuller trong lệnh inspect |
-| Nguồn giá | yfinance truy cập Yahoo Finance |
-| Adapter dữ liệu | pandas tại biên yfinance và chart; không thay Polars ở core |
-| Biểu đồ | FinPlot, Qt/PyQt6; optional extra charts |
-| Đóng gói | uv, pyproject.toml và uv.lock |
-| Kiểm chứng | pytest; suite hiện tại có 191 tests |
+| Language | Python; the locked experiment uses 3.11.16 |
+| Numerical computing and agent | NumPy arrays in float64, RNG, Q table, and state encoding |
+| Data and exports | Polars for CSV, typed Parquet, and result tables |
+| Statistical diagnostics | statsmodels Augmented Dickey-Fuller test in the inspect command |
+| Price source | yfinance accesses Yahoo Finance |
+| Data adapters | pandas at the yfinance and chart boundaries; Polars remains the core dataframe library |
+| Charts | FinPlot, Qt/PyQt6; optional `charts` extra |
+| Packaging | uv, `pyproject.toml`, and `uv.lock` |
+| Validation | pytest; the current suite has 191 tests |
 
-Agent hiện tại không cần PyTorch hoặc Gymnasium. Environment dùng episode API riêng; statsmodels không được dùng để chọn actions hoặc train Q.
+The current agent does not need PyTorch or Gymnasium. The environment uses its own episode API; statsmodels is not used to choose actions or train Q.
 
-Cấu hình thực tế nằm ở [configs](../configs/); dependencies và entry points nằm trong [pyproject.toml](../pyproject.toml). Dùng lockfile để tái tạo numerical environment thay vì tự chọn phiên bản thư viện mới.
+The implemented configuration is in [configs](../configs/); dependencies and entry points are in [pyproject.toml](../pyproject.toml). Use the lockfile to recreate the numerical environment instead of selecting new library versions.
 
-## Kiến trúc và luồng dữ liệu
+## Architecture and data flow
 
 ```text
 Yahoo/yfinance
@@ -71,23 +71,23 @@ MarketData + portfolio simulator
         report + equity/drawdown charts
 ```
 
-Trong [src/indexpilot_us100](../src/indexpilot_us100/):
+Responsibilities in [src/indexpilot_us100](../src/indexpilot_us100/):
 
-| Module | Trách nhiệm |
+| Module | Responsibility |
 |---|---|
-| data | Download, processing và inspect snapshot |
-| portfolio | Account, execution, interval transition, trades và simulator |
-| environment | Adapter tạo RL transitions từ simulator |
-| agents | Bins/actions, Q-learning và training |
-| metrics | Sharpe, MDD, CAGR, Profit Factor, Calmar |
-| evaluation | CLI, exports, chart và frozen final evaluation |
+| `data` | Download, process, and inspect snapshots |
+| `portfolio` | Account, execution, interval transitions, trades, and simulator |
+| `environment` | Adapter that creates RL transitions from the simulator |
+| `agents` | Bins/actions, Q-learning, and training |
+| `metrics` | Sharpe, MDD, CAGR, Profit Factor, and Calmar |
+| `evaluation` | CLI, exports, charts, and frozen final evaluation |
 
-RL và baselines dùng **cùng accounting engine**. Risk penalty chỉ thay reward; financial metrics được tính từ tài khoản sau phí.
+RL and baselines use the **same accounting engine**. The risk penalty changes only the reward; financial metrics are calculated from the post-fee account.
 
-Data, checkpoints và outputs được lưu local trong các thư mục bị Git ignore. Clone repository chỉ đem về code/config/tài liệu; không tự có experiment inputs.
+Data, checkpoints, and outputs are stored locally in Git-ignored directories. A repository clone contains code, configuration, and documentation, but not the experiment inputs.
 
-## Cách đọc dự án
+## How to read the project
 
-Nếu học từ đầu, đi qua dữ liệu → simulator → Q-learning → evaluation → kết quả. Nếu muốn chạy lại experiment, bắt đầu với prerequisites và archive đã khóa; fresh download không bảo đảm cùng bytes hoặc historical adjustments.
+To learn the project, follow data → simulator → Q-learning → evaluation → results. To replay the experiment, start with the prerequisites and locked archive; a fresh download does not guarantee the same bytes or historical adjustments.
 
-**Đọc tiếp:** [README dự án](../README.md) dẫn tới mục lục tài liệu và hướng dẫn chạy.
+**Next:** the [project README](../README.md) links to the documentation index and run instructions.
