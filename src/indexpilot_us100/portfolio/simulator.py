@@ -70,6 +70,24 @@ class _EpisodeRecorder:
         self.tracker.execute(day, execution)
 
 
+def _finalize_rejected_rebalance(account: Account, day: date, price: float, cost_rate: float, recorder: _EpisodeRecorder, intervals: list[dict], equity: list[dict], error: ValueError):
+    # With extreme short drift, even closing fees can exhaust positive equity.
+    final = liquidate(account, price, cost_rate)
+    account = final.account
+    recorder.record_order(day, final.execution, 'liquidation')
+    closed = recorder.event(account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
+    if not intervals:
+        raise ValueError('Unable to execute initial target') from error
+    previous = intervals[-1]
+    previous['fees'] += final.execution.fee
+    previous['cost_fraction'] += final.execution.fee / previous['start_equity']
+    previous['reward'] -= final.execution.fee / previous['start_equity']
+    previous['end_equity'] = closed['equity']
+    previous['net_return'] = closed['equity'] / previous['start_equity'] - 1
+    equity[-1] = {**closed, 'net_return': previous['net_return'], 'reward': previous['reward']}
+    return final
+
+
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
     indices = decision_indices(market, config.risk_window)
     policy.reset(config.seed)
@@ -96,20 +114,8 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
         except ValueError as error:
             if str(error) != 'Insufficient equity for target after fees':
                 raise
-            # With extreme short drift, even closing fees can exhaust positive equity.
-            final = liquidate(account, price, config.cost_rate)
+            final = _finalize_rejected_rebalance(account, day, price, config.cost_rate, recorder, intervals, equity, error)
             account, status = final.account, final.status
-            recorder.record_order(day, final.execution, 'liquidation')
-            closed = recorder.event(account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
-            if not intervals:
-                raise ValueError('Unable to execute initial target') from error
-            previous = intervals[-1]
-            previous['fees'] += final.execution.fee
-            previous['cost_fraction'] += final.execution.fee / previous['start_equity']
-            previous['reward'] -= final.execution.fee / previous['start_equity']
-            previous['end_equity'] = closed['equity']
-            previous['net_return'] = closed['equity'] / previous['start_equity'] - 1
-            equity[-1] = {**closed, 'net_return': previous['net_return'], 'reward': previous['reward']}
             break
         account = interval.account
         recorder.record_order(day, interval.execution, 'rebalance')
