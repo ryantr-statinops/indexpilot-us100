@@ -2,10 +2,12 @@
 
 import argparse
 from pathlib import Path
+
 import polars as pl
+
 from .config import EvaluationConfig
-from .protocol import prepare_protocol
 from .history import ExperimentLedger
+from .protocol import prepare_protocol
 from .workflow import run_evaluation, verify_evaluation
 
 

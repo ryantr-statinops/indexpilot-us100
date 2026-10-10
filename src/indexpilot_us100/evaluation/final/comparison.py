@@ -1,8 +1,9 @@
 """Predeclared paired lambda comparisons; no ranking or model selection."""
 
-from typing import Any
-from .types import ScoreRow
 import math
+from typing import Any
+
+from .types import ScoreRow
 
 PAIR_METRICS = (
     "net_return",

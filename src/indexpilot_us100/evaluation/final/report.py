@@ -2,11 +2,12 @@
 
 import json
 import shlex
-from pathlib import Path
-from .workflow import check_complete
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
-from .types import FrozenProtocol, ScoreRow, Coverage
+
+from .completion import check_complete
+from .types import Coverage, FrozenProtocol, ScoreRow
 
 PERCENT_FIELDS = {
     "net_return",
@@ -47,6 +48,79 @@ FINANCIAL_COLUMNS = [
     ("trade_count", "Trades"),
     ("active_intervals", "Active"),
     ("status", "Status"),
+]
+
+
+ACCOUNTING_COLUMNS = [
+    ("policy", "Policy"),
+    ("initial_equity", "Initial equity"),
+    ("final_equity", "Final equity"),
+    ("total_fees", "Fees"),
+    ("traded_notional", "Traded notional"),
+    ("normalized_turnover", "Turnover"),
+    ("order_count", "Orders"),
+    ("wins", "Wins"),
+    ("losses", "Losses"),
+    ("breakeven", "Flat P&L"),
+    ("start_date", "Actual start"),
+    ("end_date", "Actual end"),
+    ("interval_count", "Intervals"),
+]
+
+SENSITIVITY_COLUMNS = [
+    ("policy", "Policy"),
+    ("seed", "Seed"),
+    ("cost_bps", "bps"),
+    ("net_return", "Return"),
+    ("sharpe", "Sharpe"),
+    ("max_drawdown", "MDD"),
+    ("trade_count", "Trades"),
+    ("active_intervals", "Active"),
+    ("flat_decision_fraction", "Flat actions"),
+    ("unseen_state_fraction", "Unseen states"),
+    ("status", "Status"),
+]
+
+SEED_COLUMNS = [
+    ("policy", "Policy"),
+    ("cost_bps", "bps"),
+    ("metric", "Metric"),
+    ("mean", "Mean"),
+    ("median", "Median"),
+    ("sample_std", "Std"),
+    ("minimum", "Min"),
+    ("maximum", "Max"),
+    ("finite_count", "Finite"),
+    ("undefined_count", "Undefined"),
+    ("infinite_count", "∞"),
+    ("not_applicable_count", "N/A"),
+    ("insolvent_count", "Insolvent"),
+]
+
+PAIRED_COLUMNS = [
+    (key, key)
+    for key in (
+        "seed",
+        "cost_bps",
+        "net_return_delta",
+        "sharpe_delta",
+        "max_drawdown_delta",
+        "total_fees_delta",
+        "trade_count_delta",
+        "active_intervals_delta",
+    )
+]
+
+YEARLY_COLUMNS = [
+    ("scenario_id", "Scenario"),
+    ("year", "Year"),
+    ("net_return", "Return"),
+    ("fees", "Fees"),
+    ("active_intervals", "Active"),
+    ("closed_trades", "Trades closed"),
+    ("start_date", "Start"),
+    ("end_date", "End"),
+    ("partial_year", "Partial"),
 ]
 
 
@@ -162,22 +236,29 @@ def primary_results_section(context: ReportContext) -> str:
 """
         + table(
             context.primary,
-            [
-                ("policy", "Policy"),
-                ("initial_equity", "Initial equity"),
-                ("final_equity", "Final equity"),
-                ("total_fees", "Fees"),
-                ("traded_notional", "Traded notional"),
-                ("normalized_turnover", "Turnover"),
-                ("order_count", "Orders"),
-                ("wins", "Wins"),
-                ("losses", "Losses"),
-                ("breakeven", "Flat P&L"),
-                ("start_date", "Actual start"),
-                ("end_date", "Actual end"),
-                ("interval_count", "Intervals"),
-            ],
+            ACCOUNTING_COLUMNS,
         )
+    )
+
+
+def _sensitivity_table(context: ReportContext) -> str:
+    return table(
+        [row for row in context.scores if row["kind"] == "rl"],
+        SENSITIVITY_COLUMNS,
+    )
+
+
+def _seed_table(context: ReportContext) -> str:
+    return table(
+        context.seeds,
+        SEED_COLUMNS,
+    )
+
+
+def _paired_table(context: ReportContext) -> str:
+    return table(
+        context.pairs,
+        PAIRED_COLUMNS,
     )
 
 
@@ -186,22 +267,7 @@ def robustness_section(context: ReportContext) -> str:
         """## 7. Seed/cost sensitivity và mức hoạt động
 
 """
-        + table(
-            [row for row in context.scores if row["kind"] == "rl"],
-            [
-                ("policy", "Policy"),
-                ("seed", "Seed"),
-                ("cost_bps", "bps"),
-                ("net_return", "Return"),
-                ("sharpe", "Sharpe"),
-                ("max_drawdown", "MDD"),
-                ("trade_count", "Trades"),
-                ("active_intervals", "Active"),
-                ("flat_decision_fraction", "Flat actions"),
-                ("unseen_state_fraction", "Unseen states"),
-                ("status", "Status"),
-            ],
-        )
+        + _sensitivity_table(context)
         + """
 
 ### Thống kê qua seed
@@ -209,49 +275,27 @@ def robustness_section(context: ReportContext) -> str:
 Mean/median/std chỉ dùng metric hữu hạn; sample std cần ít nhất hai giá trị. Số undefined/infinite/not applicable/insolvent vẫn được báo. Baseline xác định không được nhân bản thành năm mẫu. Random là sanity check. Đây là biến thiên quá trình học trên cùng lịch sử, không phải khoảng tin cậy cho lợi nhuận tương lai.
 
 """
-        + table(
-            context.seeds,
-            [
-                ("policy", "Policy"),
-                ("cost_bps", "bps"),
-                ("metric", "Metric"),
-                ("mean", "Mean"),
-                ("median", "Median"),
-                ("sample_std", "Std"),
-                ("minimum", "Min"),
-                ("maximum", "Max"),
-                ("finite_count", "Finite"),
-                ("undefined_count", "Undefined"),
-                ("infinite_count", "∞"),
-                ("not_applicable_count", "N/A"),
-                ("insolvent_count", "Insolvent"),
-            ],
-        )
+        + _seed_table(context)
         + """
 
 ### Chênh lệch primary − reference cùng seed/cost
 
 """
-        + table(
-            context.pairs,
-            [
-                (key, key)
-                for key in (
-                    "seed",
-                    "cost_bps",
-                    "net_return_delta",
-                    "sharpe_delta",
-                    "max_drawdown_delta",
-                    "total_fees_delta",
-                    "trade_count_delta",
-                    "active_intervals_delta",
-                )
-            ],
-        )
+        + _paired_table(context)
         + """
 
 Sensitivity giữ nguyên Q, nhưng actions có thể đổi vì phí làm equity/exposure/drawdown đi vào state khác. Flat target và exposure trước lệnh là hai đại lượng khác nhau. Nhãn no_trades/sparse_trades/mostly_flat/unseen_states_present/insolvent chỉ giúp diễn giải."""
     )
+
+
+def _primary_years(context: ReportContext) -> list[dict[str, Any]]:
+    primary_ids = {row["scenario_id"] for row in context.primary}
+    return [row for row in context.years if row["scenario_id"] in primary_ids]
+
+
+def _insolvency_summary(context: ReportContext) -> str:
+    count = sum(row["status"] == "insolvent" for row in context.scores)
+    return str(count) + "/" + str(len(context.scores)) + "."
 
 
 def yearly_section(context: ReportContext) -> str:
@@ -262,30 +306,13 @@ Một episode liên tục; returns compound theo năm của end_date, fees theo 
 
 """
         + table(
-            [
-                row
-                for row in context.years
-                if row["scenario_id"] in {item["scenario_id"] for item in context.primary}
-            ],
-            [
-                ("scenario_id", "Scenario"),
-                ("year", "Year"),
-                ("net_return", "Return"),
-                ("fees", "Fees"),
-                ("active_intervals", "Active"),
-                ("closed_trades", "Trades closed"),
-                ("start_date", "Start"),
-                ("end_date", "End"),
-                ("partial_year", "Partial"),
-            ],
+            _primary_years(context),
+            YEARLY_COLUMNS,
         )
         + """
 
 Run insolvent: """
-        + str(sum((row["status"] == "insolvent" for row in context.scores)))
-        + "/"
-        + str(len(context.scores))
-        + "."
+        + _insolvency_summary(context)
     )
 
 
@@ -321,9 +348,8 @@ Use the frozen calculation revision and exact snapshot for run/verify. Restore t
 Artifacts include primary/scenario/seed/paired/yearly tables, diagnostics, protocol, ledger, and each run's equity/ledger/orders/trades/intervals/decisions/transitions. Report/chart only read artifacts. The GUI is optional; PNG rendering supports QT_QPA_PLATFORM=offscreen. Data, models, and detailed outputs stay outside Git and must be archived separately. Future single-asset research includes walk-forward evaluation, additional independent histories, improved state representation, realistic borrow/financing/slippage assumptions, and data-provider archival. These extensions are not part of the frozen experiment."""
 
 
-def generate_report(run_dir: str | Path, output_path: str | Path | None = None) -> Path:
-    root = Path(run_dir)
-    context = load_report_context(root)
+def render_report(context: ReportContext, figures: list[Path] | None = None) -> str:
+    """Render persisted report values without reading or writing artifacts."""
     sections = [
         f"# Evaluation report: {context.instrument_label}",
         research_section(context),
@@ -337,8 +363,7 @@ def generate_report(run_dir: str | Path, output_path: str | Path | None = None) 
         conclusions_section(context),
         reproduction_section(context),
     ]
-    figures = [path for path in sorted((root / "figures").glob("*.png"))]
-    if figures and output_path is None:
+    if figures:
         sections.append(
             """## Figures
 
@@ -347,13 +372,15 @@ def generate_report(run_dir: str | Path, output_path: str | Path | None = None) 
 
 """.join(f"![{path.stem}](figures/{path.name})" for path in figures)
         )
+    return "\n\n".join(sections) + "\n"
+
+
+def generate_report(run_dir: str | Path, output_path: str | Path | None = None) -> Path:
+    root = Path(run_dir)
+    context = load_report_context(root)
+    figures = [path for path in sorted((root / "figures").glob("*.png"))]
+    content = render_report(context, figures if output_path is None else None)
     destination = Path(output_path) if output_path is not None else root / "report.md"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        """
-
-""".join(sections)
-        + """
-"""
-    )
+    destination.write_text(content)
     return destination

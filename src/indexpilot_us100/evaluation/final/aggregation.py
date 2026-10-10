@@ -1,9 +1,11 @@
 """Finite-only seed statistics with explicit missing/infinite/run counts."""
 
-from typing import Any
-from .types import ScoreRow
 from collections import defaultdict
+from typing import Any
+
 import numpy as np
+
+from .types import ScoreRow
 
 METRICS = (
     "net_return",

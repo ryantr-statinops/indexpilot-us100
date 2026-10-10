@@ -1,37 +1,34 @@
 """Frozen evaluation, resumable scenario execution and independent replay."""
 
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
 import polars as pl
-from indexpilot_us100.portfolio.market import load_market_data
-from indexpilot_us100.portfolio.config import SimulationConfig
-from ..export import file_hash, write_json, write_json_atomic, git_revision
+
+from indexpilot_us100.evaluation import file_hash, git_revision, write_json, write_json_atomic
+from indexpilot_us100.portfolio import SimulationConfig, load_market_data
+
 from .aggregation import aggregate_seed_results
 from .artifacts import check_run, store_run, write_table
 from .comparison import paired_comparison
+from .completion import (
+    SUMMARY_FILES as SUMMARY_FILES,
+)
+from .completion import (
+    check_complete as check_complete,
+)
+from .completion import (
+    checked_scores as checked_scores,
+)
 from .config import EvaluationConfig
 from .history import ExperimentLedger, run_lock
-from .matrix import scenarios, evaluate_scenario
-from .protocol import validate_protocol, environment, frozen_path
-from .windows import build_test_segment
-from .yearly import yearly_summary, expected_yearly_coverage
+from .matrix import evaluate_scenario, scenarios
+from .protocol import environment, frozen_path, validate_protocol
 from .types import FrozenProtocol, RunManifest, ScoreRow, YearCoverage
-
-SUMMARY_FILES = (
-    "primary_summary.csv",
-    "primary_summary.json",
-    "scenario_summary.csv",
-    "scenario_summary.json",
-    "seed_summary.csv",
-    "seed_summary.json",
-    "paired_comparison.csv",
-    "paired_comparison.json",
-    "yearly_summary.csv",
-    "yearly_summary.json",
-    "diagnostics.json",
-)
+from .windows import build_test_segment
+from .yearly import expected_yearly_coverage, yearly_summary
 
 
 def evaluation_config(protocol: FrozenProtocol) -> EvaluationConfig:
@@ -45,28 +42,18 @@ def ledger_for(root) -> ExperimentLedger:
     return ExperimentLedger(Path(root).parent / "experiment-ledger.jsonl")
 
 
-def checked_scores(root, protocol: FrozenProtocol) -> list[ScoreRow]:
-    return [
-        check_run(frozen_path(root, "runs/" + row["scenario_id"]), protocol["protocol_id"])
-        for row in scenarios(protocol)
+def _read_run_artifacts(directory: Path, baseline: str):
+    diagnostics = json.loads((directory / "diagnostics.json").read_text())
+    accounting = directory / "accounting" / baseline
+    intervals = pl.read_parquet(accounting / "intervals.parquet").to_dicts()
+    decisions = pl.read_parquet(directory / "decisions.parquet").to_dicts()
+    events = [
+        event
+        for event in pl.read_parquet(accounting / "ledger.parquet").to_dicts()
+        if event["kind"] in ("execution", "hold")
     ]
-
-
-def check_complete(root, protocol: FrozenProtocol) -> RunManifest:
-    root = Path(root)
-    manifest = json.loads((root / "run_manifest.json").read_text())
-    if (
-        manifest.get("protocol_id") != protocol["protocol_id"]
-        or manifest.get("artifact_type") != "indexpilot-stage-4"
-    ):
-        raise ValueError("Completed run protocol mismatch")
-    actual = {name: file_hash(root / name) for name in SUMMARY_FILES}
-    if manifest.get("summary_hashes") != actual:
-        raise ValueError("Completed summary integrity failed")
-    scores = checked_scores(root, protocol)
-    if manifest.get("scenarios") != scores:
-        raise ValueError("Completed scenario inventory mismatch")
-    return manifest
+    trades = pl.read_parquet(accounting / "trades.parquet").to_dicts()
+    return diagnostics, intervals, decisions, events, trades
 
 
 def summarize(
@@ -91,16 +78,10 @@ def summarize(
     years = []
     for row in scores:
         directory = frozen_path(root, "runs/" + row["scenario_id"])
-        diagnostics[row["scenario_id"]] = json.loads((directory / "diagnostics.json").read_text())
-        accounting = directory / "accounting" / row["baseline"]
-        intervals = pl.read_parquet(accounting / "intervals.parquet").to_dicts()
-        decisions = pl.read_parquet(directory / "decisions.parquet").to_dicts()
-        events = [
-            event
-            for event in pl.read_parquet(accounting / "ledger.parquet").to_dicts()
-            if event["kind"] in ("execution", "hold")
-        ]
-        trades = pl.read_parquet(accounting / "trades.parquet").to_dicts()
+        diagnostic, intervals, decisions, events, trades = _read_run_artifacts(
+            directory, row["baseline"]
+        )
+        diagnostics[row["scenario_id"]] = diagnostic
         years += yearly_summary(row, intervals, decisions, events, trades, protocol, expected_years)
     write_table(root, "yearly_summary", years)
     write_json(root / "diagnostics.json", diagnostics)
@@ -121,6 +102,71 @@ def summarize(
     return manifest
 
 
+def _test_segment(protocol: FrozenProtocol):
+    return build_test_segment(
+        load_market_data(protocol["input_file"]),
+        evaluation_config(protocol),
+        SimulationConfig(**protocol["simulation_config"]),
+    )
+
+
+def _run_or_reuse_scenario(
+    root: Path, protocol: FrozenProtocol, segment, scenario, history: ExperimentLedger
+) -> ScoreRow:
+    directory = frozen_path(root, "runs/" + scenario["scenario_id"])
+    if directory.exists():
+        score = check_run(directory, protocol["protocol_id"])
+    else:
+        score = store_run(root, protocol, evaluate_scenario(root, protocol, segment, scenario))
+        history.append(
+            "scenario_completed",
+            protocol["protocol_id"],
+            scenario_id=scenario["scenario_id"],
+            status=score["status"],
+        )
+    return score
+
+
+def _recover_completed_event(
+    history: ExperimentLedger, protocol: FrozenProtocol, manifest: RunManifest
+) -> None:
+    if not any(
+        event["event"] == "completed" and event["protocol_id"] == protocol["protocol_id"]
+        for event in history.events()
+    ):
+        history.append(
+            "completed",
+            protocol["protocol_id"],
+            recovered=True,
+            scenarios=[row["scenario_id"] for row in manifest["scenarios"]],
+            summary_hashes=manifest["summary_hashes"],
+        )
+
+
+def _execute_scenarios(
+    root: Path,
+    protocol: FrozenProtocol,
+    segment,
+    output_root: Path,
+    completed: list[str],
+    progress=None,
+    history: ExperimentLedger | None = None,
+) -> list[ScoreRow]:
+    scores = []
+    for scenario in scenarios(protocol):
+        if history is not None:
+            score = _run_or_reuse_scenario(root, protocol, segment, scenario, history)
+        else:
+            score = store_run(
+                output_root, protocol, evaluate_scenario(root, protocol, segment, scenario)
+            )
+        scores.append(score)
+        completed.append(scenario["scenario_id"])
+        if progress:
+            progress(scenario["scenario_id"])
+    return scores
+
+
 def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     root = Path(protocol_dir)
     protocol = validate_protocol(root, input_path)
@@ -128,17 +174,7 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     with run_lock(root):
         if (root / "run_manifest.json").exists():
             manifest = check_complete(root, protocol)
-            if not any(
-                event["event"] == "completed" and event["protocol_id"] == protocol["protocol_id"]
-                for event in history.events()
-            ):
-                history.append(
-                    "completed",
-                    protocol["protocol_id"],
-                    recovered=True,
-                    scenarios=[row["scenario_id"] for row in manifest["scenarios"]],
-                    summary_hashes=manifest["summary_hashes"],
-                )
+            _recover_completed_event(history, protocol, manifest)
             return manifest
         completed = []
         history.append(
@@ -148,30 +184,8 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
             model_hashes=[row["sha256"] for row in protocol["models"]],
         )
         try:
-            segment = build_test_segment(
-                load_market_data(protocol["input_file"]),
-                evaluation_config(protocol),
-                SimulationConfig(**protocol["simulation_config"]),
-            )
-            scores = []
-            for scenario in scenarios(protocol):
-                directory = frozen_path(root, "runs/" + scenario["scenario_id"])
-                if directory.exists():
-                    score = check_run(directory, protocol["protocol_id"])
-                else:
-                    score = store_run(
-                        root, protocol, evaluate_scenario(root, protocol, segment, scenario)
-                    )
-                    history.append(
-                        "scenario_completed",
-                        protocol["protocol_id"],
-                        scenario_id=scenario["scenario_id"],
-                        status=score["status"],
-                    )
-                scores.append(score)
-                completed.append(scenario["scenario_id"])
-                if progress:
-                    progress(scenario["scenario_id"])
+            segment = _test_segment(protocol)
+            scores = _execute_scenarios(root, protocol, segment, root, completed, progress, history)
             validate_protocol(root, input_path)
             manifest = summarize(
                 root,
@@ -224,20 +238,8 @@ def verify_evaluation(protocol_dir, input_path=None, progress=None) -> Path:
         check_complete(root, protocol)
         replay = Path(tempfile.mkdtemp(prefix="verification-", dir=root))
         try:
-            segment = build_test_segment(
-                load_market_data(protocol["input_file"]),
-                evaluation_config(protocol),
-                SimulationConfig(**protocol["simulation_config"]),
-            )
-            scores = []
-            for scenario in scenarios(protocol):
-                scores.append(
-                    store_run(
-                        replay, protocol, evaluate_scenario(root, protocol, segment, scenario)
-                    )
-                )
-                if progress:
-                    progress(scenario["scenario_id"])
+            segment = _test_segment(protocol)
+            scores = _execute_scenarios(root, protocol, segment, replay, [], progress)
             summarize(
                 replay,
                 protocol,

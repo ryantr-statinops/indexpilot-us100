@@ -1,20 +1,21 @@
 """Transparent reference policies using the shared execution engine."""
-from .account import TargetExposure, HoldPosition
+
+from .account import HoldPosition, TargetExposure
 from .simulator import Observation
 
 
 class CashPolicy:
-    name = 'cash'
+    name = "cash"
 
     def reset(self, seed: int):
         pass
 
     def decide(self, observation: Observation):
-        return TargetExposure(0.)
+        return TargetExposure(0.0)
 
 
 class BuyHoldPolicy:
-    name = 'buy_hold'
+    name = "buy_hold"
 
     def reset(self, seed: int):
         self.entered = False
@@ -22,12 +23,19 @@ class BuyHoldPolicy:
     def decide(self, observation: Observation):
         if not self.entered:
             self.entered = True
-            return TargetExposure(1.)
+            return TargetExposure(1.0)
         return HoldPosition()
 
 
 def baseline_policies():
-    return [CashPolicy(), BuyHoldPolicy(), FixedExposurePolicy(.5, 'fixed_long_50'), FixedExposurePolicy(-.5, 'fixed_short_50'), SMAPolicy(), RandomPolicy()]
+    return [
+        CashPolicy(),
+        BuyHoldPolicy(),
+        FixedExposurePolicy(0.5, "fixed_long_50"),
+        FixedExposurePolicy(-0.5, "fixed_short_50"),
+        SMAPolicy(),
+        RandomPolicy(),
+    ]
 
 
 class FixedExposurePolicy:
@@ -43,21 +51,24 @@ class FixedExposurePolicy:
 
 
 class SMAPolicy:
-    name = 'sma20_long_flat'
+    name = "sma20_long_flat"
 
     def reset(self, seed: int):
         pass
 
     def decide(self, observation: Observation):
-        return TargetExposure(1. if observation.features.prior_close > observation.features.sma20 else 0.)
+        return TargetExposure(
+            1.0 if observation.features.prior_close > observation.features.sma20 else 0.0
+        )
 
 
 class RandomPolicy:
-    name = 'random_discrete'
+    name = "random_discrete"
 
     def reset(self, seed: int):
         import numpy as np
+
         self.rng = np.random.default_rng(seed)
 
     def decide(self, observation: Observation):
-        return TargetExposure(float(self.rng.choice([-1., -.5, 0., .5, 1.])))
+        return TargetExposure(float(self.rng.choice([-1.0, -0.5, 0.0, 0.5, 1.0])))

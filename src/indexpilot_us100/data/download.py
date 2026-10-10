@@ -35,8 +35,7 @@ def _column_name(column: Any) -> str:
     return str(parts[-1]).strip().lower().replace(" ", "_")
 
 
-def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
-    """Validate the normalized source columns and add adjusted-close returns."""
+def _normalize_source_columns(data: pl.DataFrame) -> pl.DataFrame:
     if data.is_empty():
         raise ValueError("Source data contains no rows.")
     if "date" not in data.columns:
@@ -53,24 +52,45 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
         if optional not in data.columns:
             data = data.with_columns(pl.lit(0.0).alias(optional))
 
+    return data
+
+
+def _derive_adjusted_returns(data: pl.DataFrame) -> pl.DataFrame:
+    data = data.with_columns(
+        (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
+        pl.col("adj_close").pct_change().alias("simple_return"),
+        (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
+        (pl.col("open") * pl.col("adj_close") / pl.col("close"))
+        .pct_change()
+        .alias("open_to_open_return"),
+    )
+    return data
+
+
+def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
+    """Validate the normalized source columns and add adjusted-close returns."""
+    data = _normalize_source_columns(data)
+
     data = (
         data.with_columns(pl.col("date").cast(pl.Date, strict=False))
         .select(
-            "date", "open", "high", "low", "close", "adj_close", "volume",
-            "dividends", "stock_splits", "capital_gains",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "adj_close",
+            "volume",
+            "dividends",
+            "stock_splits",
+            "capital_gains",
         )
         .sort("date")
     )
     if data.get_column("date").null_count():
         raise ValueError("Some rows have invalid dates.")
 
-    data = data.with_columns(
-        (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
-        pl.col("adj_close").pct_change().alias("simple_return"),
-        (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
-        (pl.col("open") * pl.col("adj_close") / pl.col("close")).pct_change().alias("open_to_open_return"),
-    )
-    return data
+    return _derive_adjusted_returns(data)
 
 
 def normalize_download(frame: Any) -> pl.DataFrame:
@@ -95,17 +115,8 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
-    """Download a ticker, persist source and processed data, and write metadata.
-
-    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
-    """
-    ticker = ticker.strip().upper()
-    if not ticker:
-        raise ValueError("Ticker must not be blank.")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    frame = yf.download(
+def _download_source(ticker: str, start: str, end: str):
+    return yf.download(
         tickers=ticker,
         start=start,
         end=end,
@@ -116,18 +127,9 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         threads=False,
         multi_level_index=False,
     )
-    normalized = normalize_download(frame)
 
-    prefix = f"{ticker.lower()}_daily_{start}_to_{end}"
-    raw_path = output_dir / f"{prefix}_raw.csv"
-    processed_path = output_dir / f"{prefix}_processed.parquet"
-    manifest_path = output_dir / f"{prefix}_manifest.json"
 
-    # Persist the normalized source response including adjusted close and corporate actions.
-    # The processed file below adds derived returns and uses Polars' typed Parquet output.
-    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
-    normalized.write_parquet(processed_path)
-
+def _snapshot_quality(normalized: pl.DataFrame) -> dict[str, Any]:
     duplicate_dates = normalized.select(pl.col("date").is_duplicated().sum()).item()
     invalid_price_rows = normalized.filter(
         pl.any_horizontal(
@@ -138,11 +140,25 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         )
     ).height
     null_counts = {
-        name: count
-        for name, count in normalized.null_count().row(0, named=True).items()
-        if count
+        name: count for name, count in normalized.null_count().row(0, named=True).items() if count
     }
-    manifest = {
+    return {
+        "duplicate_date_rows": duplicate_dates,
+        "rows_with_null_or_nonpositive_prices": invalid_price_rows,
+        "null_counts_processed": null_counts,
+    }
+
+
+def _snapshot_manifest(
+    ticker: str,
+    start: str,
+    end: str,
+    normalized: pl.DataFrame,
+    raw_path: Path,
+    processed_path: Path,
+    quality: dict[str, Any],
+) -> dict[str, Any]:
+    return {
         "provider": "Yahoo Finance via yfinance",
         "ticker": ticker,
         "interval": "1d",
@@ -159,9 +175,9 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         "rows": normalized.height,
         "first_date": str(normalized.get_column("date").min()),
         "last_date": str(normalized.get_column("date").max()),
-        "duplicate_date_rows": duplicate_dates,
-        "rows_with_null_or_nonpositive_prices": invalid_price_rows,
-        "null_counts_processed": null_counts,
+        "duplicate_date_rows": quality["duplicate_date_rows"],
+        "rows_with_null_or_nonpositive_prices": quality["rows_with_null_or_nonpositive_prices"],
+        "null_counts_processed": quality["null_counts_processed"],
         "files": {
             raw_path.name: {"sha256": _sha256(raw_path)},
             processed_path.name: {"sha256": _sha256(processed_path)},
@@ -172,7 +188,43 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
             "and should not be treated as live-trading data."
         ),
     }
+
+
+def _write_snapshot_files(normalized: pl.DataFrame, raw_path: Path, processed_path: Path) -> None:
+    # Persist the normalized source response including adjusted close and corporate actions.
+    # The processed file below adds derived returns and uses Polars' typed Parquet output.
+    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(
+        raw_path
+    )
+    normalized.write_parquet(processed_path)
+
+
+def _write_snapshot_manifest(manifest_path: Path, manifest: dict[str, Any]) -> None:
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
+    """Download a ticker, persist source and processed data, and write metadata.
+
+    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
+    """
+    ticker = ticker.strip().upper()
+    if not ticker:
+        raise ValueError("Ticker must not be blank.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    frame = _download_source(ticker, start, end)
+    normalized = normalize_download(frame)
+
+    prefix = f"{ticker.lower()}_daily_{start}_to_{end}"
+    raw_path = output_dir / f"{prefix}_raw.csv"
+    processed_path = output_dir / f"{prefix}_processed.parquet"
+    manifest_path = output_dir / f"{prefix}_manifest.json"
+
+    _write_snapshot_files(normalized, raw_path, processed_path)
+    quality = _snapshot_quality(normalized)
+    manifest = _snapshot_manifest(ticker, start, end, normalized, raw_path, processed_path, quality)
+    _write_snapshot_manifest(manifest_path, manifest)
     return {"raw": raw_path, "processed": processed_path, "manifest": manifest_path}
 
 
@@ -187,7 +239,9 @@ def process_raw_csv(raw_path: Path, processed_path: Path) -> Path:
 
 def process_main(argv: list[str] | None = None) -> int:
     """CLI entry point for reprocessing an archived raw CSV snapshot."""
-    parser = argparse.ArgumentParser(description="Reprocess an archived normalized Yahoo Finance CSV")
+    parser = argparse.ArgumentParser(
+        description="Reprocess an archived normalized Yahoo Finance CSV"
+    )
     parser.add_argument("raw_csv", type=Path, help="Raw CSV written by indexpilot-fetch")
     parser.add_argument("--output", type=Path, help="Output Parquet path")
     args = parser.parse_args(argv)
