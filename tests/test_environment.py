@@ -1,8 +1,8 @@
 import pytest
 from test_simulator import ConstantPolicy, market
 
-from indexpilot_us100.environment.trading import TradingEnvironment
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.environment import TradingEnvironment
+from indexpilot_us100.portfolio import run_episode
 
 
 def test_exact_simulator_adapter():

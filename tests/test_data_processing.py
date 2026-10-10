@@ -5,7 +5,7 @@ from datetime import date
 import polars as pl
 import pytest
 
-from indexpilot_us100.data.download import process_source_table
+from indexpilot_us100.data import process_source_table
 
 
 def source():
@@ -88,7 +88,7 @@ def test_download_manifest_describes_single_asset_snapshot(tmp_path, monkeypatch
 def test_normalize_yahoo_multilevel_columns():
     import pandas as pd
 
-    from indexpilot_us100.data.download import normalize_download
+    from indexpilot_us100.data import normalize_download
 
     frame = pd.DataFrame(
         [[100.0, 101.0, 99.0, 100.0, 50.0, 1000], [50.0, 51.0, 49.0, 50.0, 50.0, 2000]],
@@ -111,7 +111,7 @@ def test_normalize_yahoo_multilevel_columns():
 
 
 def test_archived_csv_rebuild_matches_processed_snapshot(tmp_path):
-    from indexpilot_us100.data.download import process_raw_csv
+    from indexpilot_us100.data import process_raw_csv
 
     raw = tmp_path / "snapshot_raw.csv"
     source().write_csv(raw)
