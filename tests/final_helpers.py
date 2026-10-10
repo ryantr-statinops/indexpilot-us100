@@ -1,11 +1,10 @@
 import polars as pl
 from test_reconciliation import synthetic_market
 
-from indexpilot_us100.agents.config import LearningConfig
-from indexpilot_us100.agents.training import run_experiments
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
-from indexpilot_us100.evaluation.learning_export import export_learning
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.agents import LearningConfig, run_experiments
+from indexpilot_us100.evaluation import export_learning
+from indexpilot_us100.evaluation.final import EvaluationConfig
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def source_fixture(tmp_path):

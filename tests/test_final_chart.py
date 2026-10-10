@@ -27,7 +27,7 @@ def test_offscreen_png_smoke(tmp_path):
     script = """import numpy as np
 from pathlib import Path
 from PyQt6.QtCore import QTimer
-from indexpilot_us100.evaluation.chart import create_chart
+from indexpilot_us100.evaluation import create_chart
 series=[dict(name='cash',status='completed',times=np.array([1700000000.,1700086400.]),equity=np.array([100000.,100000.]),drawdown=np.array([0.,0.]))]
 fplt,axes=create_chart(series)
 def save():
