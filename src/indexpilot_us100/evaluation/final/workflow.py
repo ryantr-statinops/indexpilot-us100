@@ -1,24 +1,36 @@
 """Frozen evaluation, resumable scenario execution and independent replay."""
 
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
 import polars as pl
-from indexpilot_us100.portfolio.market import load_market_data
+
 from indexpilot_us100.portfolio.config import SimulationConfig
-from ..export import file_hash, write_json, write_json_atomic, git_revision
+from indexpilot_us100.portfolio.market import load_market_data
+
+from ..export import file_hash, git_revision, write_json, write_json_atomic
 from .aggregation import aggregate_seed_results
 from .artifacts import check_run, store_run, write_table
 from .comparison import paired_comparison
-from .completion import SUMMARY_FILES as SUMMARY_FILES, checked_scores as checked_scores, check_complete as check_complete
+from .completion import (
+    SUMMARY_FILES as SUMMARY_FILES,
+)
+from .completion import (
+    check_complete as check_complete,
+)
+from .completion import (
+    checked_scores as checked_scores,
+)
 from .config import EvaluationConfig
 from .history import ExperimentLedger, run_lock
-from .matrix import scenarios, evaluate_scenario
-from .protocol import validate_protocol, environment, frozen_path
-from .windows import build_test_segment
-from .yearly import yearly_summary, expected_yearly_coverage
+from .matrix import evaluate_scenario, scenarios
+from .protocol import environment, frozen_path, validate_protocol
 from .types import FrozenProtocol, RunManifest, ScoreRow, YearCoverage
+from .windows import build_test_segment
+from .yearly import expected_yearly_coverage, yearly_summary
+
 
 def evaluation_config(protocol: FrozenProtocol) -> EvaluationConfig:
     values = dict(protocol["evaluation_config"])
@@ -67,7 +79,9 @@ def summarize(
     years = []
     for row in scores:
         directory = frozen_path(root, "runs/" + row["scenario_id"])
-        diagnostic, intervals, decisions, events, trades = _read_run_artifacts(directory, row["baseline"])
+        diagnostic, intervals, decisions, events, trades = _read_run_artifacts(
+            directory, row["baseline"]
+        )
         diagnostics[row["scenario_id"]] = diagnostic
         years += yearly_summary(row, intervals, decisions, events, trades, protocol, expected_years)
     write_table(root, "yearly_summary", years)
@@ -97,14 +111,14 @@ def _test_segment(protocol: FrozenProtocol):
     )
 
 
-def _run_or_reuse_scenario(root: Path, protocol: FrozenProtocol, segment, scenario, history: ExperimentLedger) -> ScoreRow:
+def _run_or_reuse_scenario(
+    root: Path, protocol: FrozenProtocol, segment, scenario, history: ExperimentLedger
+) -> ScoreRow:
     directory = frozen_path(root, "runs/" + scenario["scenario_id"])
     if directory.exists():
         score = check_run(directory, protocol["protocol_id"])
     else:
-        score = store_run(
-            root, protocol, evaluate_scenario(root, protocol, segment, scenario)
-        )
+        score = store_run(root, protocol, evaluate_scenario(root, protocol, segment, scenario))
         history.append(
             "scenario_completed",
             protocol["protocol_id"],
@@ -114,7 +128,9 @@ def _run_or_reuse_scenario(root: Path, protocol: FrozenProtocol, segment, scenar
     return score
 
 
-def _recover_completed_event(history: ExperimentLedger, protocol: FrozenProtocol, manifest: RunManifest) -> None:
+def _recover_completed_event(
+    history: ExperimentLedger, protocol: FrozenProtocol, manifest: RunManifest
+) -> None:
     if not any(
         event["event"] == "completed" and event["protocol_id"] == protocol["protocol_id"]
         for event in history.events()
@@ -128,13 +144,23 @@ def _recover_completed_event(history: ExperimentLedger, protocol: FrozenProtocol
         )
 
 
-def _execute_scenarios(root: Path, protocol: FrozenProtocol, segment, output_root: Path, completed: list[str], progress=None, history: ExperimentLedger | None = None) -> list[ScoreRow]:
+def _execute_scenarios(
+    root: Path,
+    protocol: FrozenProtocol,
+    segment,
+    output_root: Path,
+    completed: list[str],
+    progress=None,
+    history: ExperimentLedger | None = None,
+) -> list[ScoreRow]:
     scores = []
     for scenario in scenarios(protocol):
         if history is not None:
             score = _run_or_reuse_scenario(root, protocol, segment, scenario, history)
         else:
-            score = store_run(output_root, protocol, evaluate_scenario(root, protocol, segment, scenario))
+            score = store_run(
+                output_root, protocol, evaluate_scenario(root, protocol, segment, scenario)
+            )
         scores.append(score)
         completed.append(scenario["scenario_id"])
         if progress:

@@ -1,11 +1,12 @@
 """Causal test slicing with account reset at the first eligible test open."""
 
-from indexpilot_us100.portfolio.market import MarketData
-from indexpilot_us100.portfolio.config import SimulationConfig
-from .config import EvaluationConfig
 from bisect import bisect_left, bisect_right
 from datetime import date
+
+from indexpilot_us100.portfolio.config import SimulationConfig
 from indexpilot_us100.portfolio.market import MarketData, decision_indices
+
+from .config import EvaluationConfig
 
 
 def build_test_segment(

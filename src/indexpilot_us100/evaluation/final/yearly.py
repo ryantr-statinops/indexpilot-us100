@@ -1,13 +1,15 @@
 """Calendar attribution of one continuous episode, including terminal fees."""
 
-from typing import Any
-from .types import Scenario, FrozenProtocol, DecisionRecord, YearCoverage
-from indexpilot_us100.portfolio.market import MarketData
-from indexpilot_us100.portfolio.config import SimulationConfig
-from datetime import date
 from collections import defaultdict
+from datetime import date
+from typing import Any
+
 import numpy as np
-from indexpilot_us100.portfolio.market import decision_indices
+
+from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.portfolio.market import MarketData, decision_indices
+
+from .types import DecisionRecord, FrozenProtocol, Scenario, YearCoverage
 
 
 def expected_yearly_coverage(
