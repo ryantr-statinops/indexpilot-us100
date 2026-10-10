@@ -43,6 +43,14 @@ class SimulationResult:
     warnings: tuple[str, ...]
 
 
+def _observation(market: MarketData, index: int, account: Account, equity: float, peak: float, risk_window: int) -> Observation:
+    price = float(market.opens[index])
+    return Observation(
+        index, market.dates[index], market_features(market, index, risk_window),
+        account.cash, account.holdings, equity, account.exposure(price), 1 - equity / peak,
+    )
+
+
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
     indices = decision_indices(market, config.risk_window)
     policy.reset(config.seed)
@@ -72,7 +80,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
         day, next_day = market.dates[index:index+2]
         price, next_price = map(float, market.opens[index:index+2])
         before = account.equity(price)
-        observation = Observation(index, day, market_features(market, index, config.risk_window), account.cash, account.holdings, before, account.exposure(price), 1 - before / peak)
+        observation = _observation(market, index, account, before, peak, config.risk_window)
         action = policy.decide(observation)
         try:
             interval = advance_interval(account, price, next_price, action, config.cost_rate)
