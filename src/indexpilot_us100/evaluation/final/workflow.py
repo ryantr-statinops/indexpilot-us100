@@ -31,6 +31,20 @@ def ledger_for(root) -> ExperimentLedger:
     return ExperimentLedger(Path(root).parent / "experiment-ledger.jsonl")
 
 
+def _read_run_artifacts(directory: Path, baseline: str):
+    diagnostics = json.loads((directory / "diagnostics.json").read_text())
+    accounting = directory / "accounting" / baseline
+    intervals = pl.read_parquet(accounting / "intervals.parquet").to_dicts()
+    decisions = pl.read_parquet(directory / "decisions.parquet").to_dicts()
+    events = [
+        event
+        for event in pl.read_parquet(accounting / "ledger.parquet").to_dicts()
+        if event["kind"] in ("execution", "hold")
+    ]
+    trades = pl.read_parquet(accounting / "trades.parquet").to_dicts()
+    return diagnostics, intervals, decisions, events, trades
+
+
 def summarize(
     root, protocol: FrozenProtocol, scores: list[ScoreRow], expected_years: dict[int, YearCoverage]
 ) -> RunManifest:
@@ -53,16 +67,8 @@ def summarize(
     years = []
     for row in scores:
         directory = frozen_path(root, "runs/" + row["scenario_id"])
-        diagnostics[row["scenario_id"]] = json.loads((directory / "diagnostics.json").read_text())
-        accounting = directory / "accounting" / row["baseline"]
-        intervals = pl.read_parquet(accounting / "intervals.parquet").to_dicts()
-        decisions = pl.read_parquet(directory / "decisions.parquet").to_dicts()
-        events = [
-            event
-            for event in pl.read_parquet(accounting / "ledger.parquet").to_dicts()
-            if event["kind"] in ("execution", "hold")
-        ]
-        trades = pl.read_parquet(accounting / "trades.parquet").to_dicts()
+        diagnostic, intervals, decisions, events, trades = _read_run_artifacts(directory, row["baseline"])
+        diagnostics[row["scenario_id"]] = diagnostic
         years += yearly_summary(row, intervals, decisions, events, trades, protocol, expected_years)
     write_table(root, "yearly_summary", years)
     write_json(root / "diagnostics.json", diagnostics)
