@@ -1,22 +1,24 @@
 """Freeze and verify data, checkpoints, code and runtime provenance."""
 
-from dataclasses import asdict
-from datetime import datetime, timezone
 import hashlib
-from importlib.metadata import version, PackageNotFoundError
 import json
-from pathlib import Path
 import platform
 import shutil
 import tempfile
+from dataclasses import asdict
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+
 from indexpilot_us100.agents.state import ACTIONS, BIN_EDGES, FEATURE_NAMES, STATE_COUNT
-from indexpilot_us100.portfolio.market import load_market_data, decision_indices
+from indexpilot_us100.portfolio.market import decision_indices, load_market_data
+
 from ..export import file_hash, git_revision, write_json
 from .config import EvaluationConfig
 from .preparation import prepare_models
 from .source import validate_source
+from .types import EnvironmentRecord, FrozenProtocol
 from .windows import build_test_segment
-from .types import FrozenProtocol, EnvironmentRecord
 
 CORE_PACKAGES = ("indexpilot-us100", "numpy", "polars", "pandas", "statsmodels", "yfinance")
 

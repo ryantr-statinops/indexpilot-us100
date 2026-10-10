@@ -2,11 +2,12 @@
 
 import json
 import shlex
-from pathlib import Path
-from .completion import check_complete
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
-from .types import FrozenProtocol, ScoreRow, Coverage
+
+from .completion import check_complete
+from .types import Coverage, FrozenProtocol, ScoreRow
 
 PERCENT_FIELDS = {
     "net_return",
@@ -51,76 +52,76 @@ FINANCIAL_COLUMNS = [
 
 
 ACCOUNTING_COLUMNS = [
-                ("policy", "Policy"),
-                ("initial_equity", "Initial equity"),
-                ("final_equity", "Final equity"),
-                ("total_fees", "Fees"),
-                ("traded_notional", "Traded notional"),
-                ("normalized_turnover", "Turnover"),
-                ("order_count", "Orders"),
-                ("wins", "Wins"),
-                ("losses", "Losses"),
-                ("breakeven", "Flat P&L"),
-                ("start_date", "Actual start"),
-                ("end_date", "Actual end"),
-                ("interval_count", "Intervals"),
-            ]
+    ("policy", "Policy"),
+    ("initial_equity", "Initial equity"),
+    ("final_equity", "Final equity"),
+    ("total_fees", "Fees"),
+    ("traded_notional", "Traded notional"),
+    ("normalized_turnover", "Turnover"),
+    ("order_count", "Orders"),
+    ("wins", "Wins"),
+    ("losses", "Losses"),
+    ("breakeven", "Flat P&L"),
+    ("start_date", "Actual start"),
+    ("end_date", "Actual end"),
+    ("interval_count", "Intervals"),
+]
 
 SENSITIVITY_COLUMNS = [
-                ("policy", "Policy"),
-                ("seed", "Seed"),
-                ("cost_bps", "bps"),
-                ("net_return", "Return"),
-                ("sharpe", "Sharpe"),
-                ("max_drawdown", "MDD"),
-                ("trade_count", "Trades"),
-                ("active_intervals", "Active"),
-                ("flat_decision_fraction", "Flat actions"),
-                ("unseen_state_fraction", "Unseen states"),
-                ("status", "Status"),
-            ]
+    ("policy", "Policy"),
+    ("seed", "Seed"),
+    ("cost_bps", "bps"),
+    ("net_return", "Return"),
+    ("sharpe", "Sharpe"),
+    ("max_drawdown", "MDD"),
+    ("trade_count", "Trades"),
+    ("active_intervals", "Active"),
+    ("flat_decision_fraction", "Flat actions"),
+    ("unseen_state_fraction", "Unseen states"),
+    ("status", "Status"),
+]
 
 SEED_COLUMNS = [
-                ("policy", "Policy"),
-                ("cost_bps", "bps"),
-                ("metric", "Metric"),
-                ("mean", "Mean"),
-                ("median", "Median"),
-                ("sample_std", "Std"),
-                ("minimum", "Min"),
-                ("maximum", "Max"),
-                ("finite_count", "Finite"),
-                ("undefined_count", "Undefined"),
-                ("infinite_count", "∞"),
-                ("not_applicable_count", "N/A"),
-                ("insolvent_count", "Insolvent"),
-            ]
+    ("policy", "Policy"),
+    ("cost_bps", "bps"),
+    ("metric", "Metric"),
+    ("mean", "Mean"),
+    ("median", "Median"),
+    ("sample_std", "Std"),
+    ("minimum", "Min"),
+    ("maximum", "Max"),
+    ("finite_count", "Finite"),
+    ("undefined_count", "Undefined"),
+    ("infinite_count", "∞"),
+    ("not_applicable_count", "N/A"),
+    ("insolvent_count", "Insolvent"),
+]
 
 PAIRED_COLUMNS = [
-                (key, key)
-                for key in (
-                    "seed",
-                    "cost_bps",
-                    "net_return_delta",
-                    "sharpe_delta",
-                    "max_drawdown_delta",
-                    "total_fees_delta",
-                    "trade_count_delta",
-                    "active_intervals_delta",
-                )
-            ]
+    (key, key)
+    for key in (
+        "seed",
+        "cost_bps",
+        "net_return_delta",
+        "sharpe_delta",
+        "max_drawdown_delta",
+        "total_fees_delta",
+        "trade_count_delta",
+        "active_intervals_delta",
+    )
+]
 
 YEARLY_COLUMNS = [
-                ("scenario_id", "Scenario"),
-                ("year", "Year"),
-                ("net_return", "Return"),
-                ("fees", "Fees"),
-                ("active_intervals", "Active"),
-                ("closed_trades", "Trades closed"),
-                ("start_date", "Start"),
-                ("end_date", "End"),
-                ("partial_year", "Partial"),
-            ]
+    ("scenario_id", "Scenario"),
+    ("year", "Year"),
+    ("net_return", "Return"),
+    ("fees", "Fees"),
+    ("active_intervals", "Active"),
+    ("closed_trades", "Trades closed"),
+    ("start_date", "Start"),
+    ("end_date", "End"),
+    ("partial_year", "Partial"),
+]
 
 
 @dataclass(frozen=True)
@@ -242,23 +243,23 @@ def primary_results_section(context: ReportContext) -> str:
 
 def _sensitivity_table(context: ReportContext) -> str:
     return table(
-            [row for row in context.scores if row["kind"] == "rl"],
-            SENSITIVITY_COLUMNS,
-        )
+        [row for row in context.scores if row["kind"] == "rl"],
+        SENSITIVITY_COLUMNS,
+    )
 
 
 def _seed_table(context: ReportContext) -> str:
     return table(
-            context.seeds,
-            SEED_COLUMNS,
-        )
+        context.seeds,
+        SEED_COLUMNS,
+    )
 
 
 def _paired_table(context: ReportContext) -> str:
     return table(
-            context.pairs,
-            PAIRED_COLUMNS,
-        )
+        context.pairs,
+        PAIRED_COLUMNS,
+    )
 
 
 def robustness_section(context: ReportContext) -> str:
