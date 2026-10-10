@@ -14,8 +14,7 @@ def load_chart_series(run_dir: str | Path, cost_bps=None, risk_lambda=None, seed
     root = Path(run_dir)
     manifest = json.loads((root / "run_manifest.json").read_text())
     if manifest.get("artifact_type") == "indexpilot-stage-4":
-        from .final.protocol import frozen_path
-        from .final.workflow import check_complete
+        from indexpilot_us100.evaluation.final import check_complete, frozen_path
 
         protocol = json.loads((root / "protocol.json").read_text())
         check_complete(root, protocol)

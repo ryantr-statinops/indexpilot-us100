@@ -14,7 +14,7 @@ from pathlib import Path
 import polars as pl
 
 from indexpilot_us100.metrics import compute_metrics, drawdown_curve
-from indexpilot_us100.portfolio.simulator import SimulationResult
+from indexpilot_us100.portfolio import SimulationResult
 
 EVENT_SCHEMA = {
     "sequence": pl.Int64,
