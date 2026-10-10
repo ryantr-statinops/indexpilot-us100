@@ -55,6 +55,8 @@ def _observation(market: MarketData, index: int, account: Account, equity: float
 class _EpisodeRecorder:
     peak: float
     ledger: list[dict] = field(default_factory=list)
+    orders: list[dict] = field(default_factory=list)
+    tracker: TradeTracker = field(default_factory=TradeTracker)
 
     def event(self, account: Account, day: date, kind: str, price: float, fee: float = 0., notional: float = 0.) -> dict:
         record = account_event(len(self.ledger), day, kind, account, float(price), fee, notional)
@@ -62,21 +64,22 @@ class _EpisodeRecorder:
         self.peak = max(self.peak, record['equity'])
         return record
 
+    def record_order(self, day: date, execution, kind: str) -> None:
+        if execution.traded_notional:
+            self.orders.append(order_record(len(self.orders), day, execution, kind))
+        self.tracker.execute(day, execution)
+
 
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
     indices = decision_indices(market, config.risk_window)
     policy.reset(config.seed)
     account = Account(config.initial_equity)
-    tracker = TradeTracker()
     recorder = _EpisodeRecorder(config.initial_equity)
     ledger = recorder.ledger
-    orders, equity, intervals = [], [], []
+    orders = recorder.orders
+    tracker = recorder.tracker
+    equity, intervals = [], []
     status = 'completed'
-
-    def record_order(day, execution, kind):
-        if execution.traded_notional:
-            orders.append(order_record(len(orders), day, execution, kind))
-        tracker.execute(day, execution)
 
     first = indices.start
     initial = recorder.event(account, market.dates[first], 'initial', market.opens[first])
@@ -96,7 +99,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
             # With extreme short drift, even closing fees can exhaust positive equity.
             final = liquidate(account, price, config.cost_rate)
             account, status = final.account, final.status
-            record_order(day, final.execution, 'liquidation')
+            recorder.record_order(day, final.execution, 'liquidation')
             closed = recorder.event(account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
             if not intervals:
                 raise ValueError('Unable to execute initial target') from error
@@ -109,7 +112,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
             equity[-1] = {**closed, 'net_return': previous['net_return'], 'reward': previous['reward']}
             break
         account = interval.account
-        record_order(day, interval.execution, 'rebalance')
+        recorder.record_order(day, interval.execution, 'rebalance')
         recorder.event(account, day, 'execution' if interval.execution.traded_notional else 'hold', price, interval.execution.fee, interval.execution.traded_notional)
         tracker.accrue(interval.gross_pnl)
         recorder.event(account, next_day, 'mark', next_price)
@@ -118,7 +121,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
             final = liquidate(account, next_price, config.cost_rate)
             account, status = final.account, final.status
             closing_fee = final.execution.fee
-            record_order(next_day, final.execution, 'liquidation')
+            recorder.record_order(next_day, final.execution, 'liquidation')
             recorder.event(account, next_day, 'liquidation', next_price, closing_fee, final.execution.traded_notional)
         reward = interval_reward(interval, observation.features.volatility, config.risk_lambda, closing_fee)
         end_equity = account.equity(next_price)
