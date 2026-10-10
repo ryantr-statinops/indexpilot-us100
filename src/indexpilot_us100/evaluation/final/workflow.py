@@ -91,6 +91,23 @@ def _test_segment(protocol: FrozenProtocol):
     )
 
 
+def _run_or_reuse_scenario(root: Path, protocol: FrozenProtocol, segment, scenario, history: ExperimentLedger) -> ScoreRow:
+    directory = frozen_path(root, "runs/" + scenario["scenario_id"])
+    if directory.exists():
+        score = check_run(directory, protocol["protocol_id"])
+    else:
+        score = store_run(
+            root, protocol, evaluate_scenario(root, protocol, segment, scenario)
+        )
+        history.append(
+            "scenario_completed",
+            protocol["protocol_id"],
+            scenario_id=scenario["scenario_id"],
+            status=score["status"],
+        )
+    return score
+
+
 def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     root = Path(protocol_dir)
     protocol = validate_protocol(root, input_path)
@@ -121,19 +138,7 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
             segment = _test_segment(protocol)
             scores = []
             for scenario in scenarios(protocol):
-                directory = frozen_path(root, "runs/" + scenario["scenario_id"])
-                if directory.exists():
-                    score = check_run(directory, protocol["protocol_id"])
-                else:
-                    score = store_run(
-                        root, protocol, evaluate_scenario(root, protocol, segment, scenario)
-                    )
-                    history.append(
-                        "scenario_completed",
-                        protocol["protocol_id"],
-                        scenario_id=scenario["scenario_id"],
-                        status=score["status"],
-                    )
+                score = _run_or_reuse_scenario(root, protocol, segment, scenario, history)
                 scores.append(score)
                 completed.append(scenario["scenario_id"])
                 if progress:
