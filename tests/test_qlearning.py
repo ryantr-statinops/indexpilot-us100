@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from indexpilot_us100.agents.config import LearningConfig
-from indexpilot_us100.agents.qlearning import QLearningAgent
+from indexpilot_us100.agents import LearningConfig, QLearningAgent
 
 
 def test_toy_bellman_update_and_terminal():

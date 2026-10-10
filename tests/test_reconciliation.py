@@ -9,15 +9,18 @@ import pytest
 from test_simulator import ConstantPolicy, market
 
 from indexpilot_us100.metrics import compute_metrics
-from indexpilot_us100.portfolio.account import Account, HoldPosition, TargetExposure, rebalance
-from indexpilot_us100.portfolio.baselines import (
+from indexpilot_us100.portfolio import (
+    Account,
     BuyHoldPolicy,
+    HoldPosition,
+    MarketData,
     RandomPolicy,
+    SimulationConfig,
+    TargetExposure,
     baseline_policies,
+    rebalance,
+    run_episode,
 )
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import MarketData
-from indexpilot_us100.portfolio.simulator import run_episode
 
 
 def synthetic_market(seed=8):
