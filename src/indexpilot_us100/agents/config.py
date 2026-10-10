@@ -6,7 +6,7 @@ from dataclasses import dataclass, fields
 from datetime import date
 from pathlib import Path
 
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 @dataclass(frozen=True)

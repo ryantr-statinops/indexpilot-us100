@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from indexpilot_us100.portfolio.account import TargetExposure
+from indexpilot_us100.portfolio import TargetExposure
 
 from .config import LearningConfig
 from .state import ACTIONS, BIN_EDGES, FEATURE_NAMES, STATE_COUNT, encode_state

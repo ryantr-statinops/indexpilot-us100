@@ -6,11 +6,14 @@ from datetime import date
 
 import numpy as np
 
-from indexpilot_us100.environment.trading import TradingEnvironment, Trajectory
+from indexpilot_us100.environment import TradingEnvironment, Trajectory
 from indexpilot_us100.metrics import compute_metrics
-from indexpilot_us100.portfolio.baselines import baseline_policies
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import MarketData, decision_indices
+from indexpilot_us100.portfolio import (
+    MarketData,
+    SimulationConfig,
+    baseline_policies,
+    decision_indices,
+)
 
 from .config import LearningConfig
 from .qlearning import QLearningAgent
@@ -98,7 +101,7 @@ def run_experiments(market, simulation, learning, progress=None):
         agent, logs = train_agent(train, config, learning, progress)
         greedy_train = TradingEnvironment(train, config).rollout(agent)
         greedy_validation = TradingEnvironment(validation, config).rollout(agent)
-        from indexpilot_us100.portfolio.simulator import run_episode
+        from indexpilot_us100.portfolio import run_episode
 
         baselines = [run_episode(validation, policy, config) for policy in baseline_policies()]
         experiments.append(

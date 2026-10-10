@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from indexpilot_us100.portfolio.simulator import Observation
+from indexpilot_us100.portfolio import Observation
 
 ACTIONS = (-1.0, -0.5, 0.0, 0.5, 1.0)
 FEATURE_NAMES = ("return_1", "return_5", "return_20", "volatility", "exposure", "drawdown")
