@@ -347,9 +347,8 @@ Use the frozen calculation revision and exact snapshot for run/verify. Restore t
 Artifacts include primary/scenario/seed/paired/yearly tables, diagnostics, protocol, ledger, and each run's equity/ledger/orders/trades/intervals/decisions/transitions. Report/chart only read artifacts. The GUI is optional; PNG rendering supports QT_QPA_PLATFORM=offscreen. Data, models, and detailed outputs stay outside Git and must be archived separately. Future single-asset research includes walk-forward evaluation, additional independent histories, improved state representation, realistic borrow/financing/slippage assumptions, and data-provider archival. These extensions are not part of the frozen experiment."""
 
 
-def generate_report(run_dir: str | Path, output_path: str | Path | None = None) -> Path:
-    root = Path(run_dir)
-    context = load_report_context(root)
+def render_report(context: ReportContext, figures: list[Path] | None = None) -> str:
+    """Render persisted report values without reading or writing artifacts."""
     sections = [
         f"# Evaluation report: {context.instrument_label}",
         research_section(context),
@@ -363,8 +362,7 @@ def generate_report(run_dir: str | Path, output_path: str | Path | None = None) 
         conclusions_section(context),
         reproduction_section(context),
     ]
-    figures = [path for path in sorted((root / "figures").glob("*.png"))]
-    if figures and output_path is None:
+    if figures:
         sections.append(
             """## Figures
 
@@ -373,13 +371,15 @@ def generate_report(run_dir: str | Path, output_path: str | Path | None = None) 
 
 """.join(f"![{path.stem}](figures/{path.name})" for path in figures)
         )
+    return "\n\n".join(sections) + "\n"
+
+
+def generate_report(run_dir: str | Path, output_path: str | Path | None = None) -> Path:
+    root = Path(run_dir)
+    context = load_report_context(root)
+    figures = [path for path in sorted((root / "figures").glob("*.png"))]
+    content = render_report(context, figures if output_path is None else None)
     destination = Path(output_path) if output_path is not None else root / "report.md"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        """
-
-""".join(sections)
-        + """
-"""
-    )
+    destination.write_text(content)
     return destination
