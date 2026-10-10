@@ -53,3 +53,16 @@ Preserve CLI entry points, callable interfaces, serialized schemas, accounting e
 Published protocols fingerprint Python source and the dependency lock. Refactoring and formatting change those fingerprints even when numerical behavior stays the same. Replay historical experiments using the recorded calculation revision described in [the reproduction guide](08-reproduction.md); prepare a new protocol when evaluating the current code. Keep historical data, checkpoints, protocols, and results intact.
 
 Push completed changes to `dev` in commit order. Prepare the `dev` to `main` PR description with the changes, regression evidence, and any limitations after final checks pass.
+
+## Package API and imports
+
+Import public interfaces through their package facade. Keep implementation-to-implementation imports direct and relative within the same package; a package should not import another package's private modules.
+
+```python
+from indexpilot_us100.agents import QLearningAgent
+from indexpilot_us100.environment import TradingEnvironment
+from indexpilot_us100.portfolio import SimulationConfig, run_episode
+from indexpilot_us100.evaluation.final import prepare_protocol, run_evaluation
+```
+
+The public names are declared in each package's `__all__`. Package facades load the implementation lazily, cache the resolved object, and preserve the existing module paths for compatibility. Use module imports directly for private helpers, CLI `main` functions, and tests that monkeypatch implementation details. The root package only exposes `__version__` and does not aggregate subpackage APIs.
