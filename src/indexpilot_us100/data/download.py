@@ -142,31 +142,8 @@ def _snapshot_quality(normalized: pl.DataFrame) -> dict[str, Any]:
     }
 
 
-def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
-    """Download a ticker, persist source and processed data, and write metadata.
-
-    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
-    """
-    ticker = ticker.strip().upper()
-    if not ticker:
-        raise ValueError("Ticker must not be blank.")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    frame = _download_source(ticker, start, end)
-    normalized = normalize_download(frame)
-
-    prefix = f"{ticker.lower()}_daily_{start}_to_{end}"
-    raw_path = output_dir / f"{prefix}_raw.csv"
-    processed_path = output_dir / f"{prefix}_processed.parquet"
-    manifest_path = output_dir / f"{prefix}_manifest.json"
-
-    # Persist the normalized source response including adjusted close and corporate actions.
-    # The processed file below adds derived returns and uses Polars' typed Parquet output.
-    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
-    normalized.write_parquet(processed_path)
-
-    quality = _snapshot_quality(normalized)
-    manifest = {
+def _snapshot_manifest(ticker: str, start: str, end: str, normalized: pl.DataFrame, raw_path: Path, processed_path: Path, quality: dict[str, Any]) -> dict[str, Any]:
+    return {
         "provider": "Yahoo Finance via yfinance",
         "ticker": ticker,
         "interval": "1d",
@@ -196,6 +173,33 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
             "and should not be treated as live-trading data."
         ),
     }
+
+
+def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
+    """Download a ticker, persist source and processed data, and write metadata.
+
+    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
+    """
+    ticker = ticker.strip().upper()
+    if not ticker:
+        raise ValueError("Ticker must not be blank.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    frame = _download_source(ticker, start, end)
+    normalized = normalize_download(frame)
+
+    prefix = f"{ticker.lower()}_daily_{start}_to_{end}"
+    raw_path = output_dir / f"{prefix}_raw.csv"
+    processed_path = output_dir / f"{prefix}_processed.parquet"
+    manifest_path = output_dir / f"{prefix}_manifest.json"
+
+    # Persist the normalized source response including adjusted close and corporate actions.
+    # The processed file below adds derived returns and uses Polars' typed Parquet output.
+    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
+    normalized.write_parquet(processed_path)
+
+    quality = _snapshot_quality(normalized)
+    manifest = _snapshot_manifest(ticker, start, end, normalized, raw_path, processed_path, quality)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return {"raw": raw_path, "processed": processed_path, "manifest": manifest_path}
 
