@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from indexpilot_us100.portfolio.market import MarketData, load_market_data
+from indexpilot_us100.portfolio import MarketData, load_market_data
 
 
 def frame(n=30):
@@ -44,7 +44,7 @@ def test_dates_and_missing():
 
 
 def test_causal_window():
-    from indexpilot_us100.portfolio.market import decision_indices, market_features
+    from indexpilot_us100.portfolio import decision_indices, market_features
 
     market = MarketData.from_frame(frame())
     assert list(decision_indices(market))[0] == 21

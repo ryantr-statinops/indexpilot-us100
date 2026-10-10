@@ -3,8 +3,7 @@ import pytest
 from test_simulator import market
 
 from indexpilot_us100.metrics import compute_metrics, drawdown_curve
-from indexpilot_us100.portfolio.baselines import BuyHoldPolicy, CashPolicy
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.portfolio import BuyHoldPolicy, CashPolicy, run_episode
 
 
 def test_hand_drawdown():
