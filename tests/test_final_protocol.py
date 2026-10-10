@@ -3,7 +3,7 @@ from dataclasses import replace
 import pytest
 from final_helpers import source_fixture
 
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol, validate_protocol
+from indexpilot_us100.evaluation.final import prepare_protocol, validate_protocol
 
 
 def test_freeze_and_tampering(tmp_path):

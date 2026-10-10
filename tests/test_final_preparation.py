@@ -2,10 +2,10 @@ from dataclasses import replace
 
 from final_helpers import source_fixture
 
-from indexpilot_us100.evaluation.export import file_hash
+from indexpilot_us100.evaluation import file_hash
 from indexpilot_us100.evaluation.final.preparation import prepare_models
 from indexpilot_us100.evaluation.final.source import validate_source
-from indexpilot_us100.portfolio.market import load_market_data
+from indexpilot_us100.portfolio import load_market_data
 
 
 def test_primary_copied_additional_seed_training_only(tmp_path, monkeypatch):
