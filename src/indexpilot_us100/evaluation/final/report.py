@@ -287,6 +287,16 @@ Sensitivity giữ nguyên Q, nhưng actions có thể đổi vì phí làm equit
     )
 
 
+def _primary_years(context: ReportContext) -> list[dict[str, Any]]:
+    primary_ids = {row["scenario_id"] for row in context.primary}
+    return [row for row in context.years if row["scenario_id"] in primary_ids]
+
+
+def _insolvency_summary(context: ReportContext) -> str:
+    count = sum(row["status"] == "insolvent" for row in context.scores)
+    return str(count) + "/" + str(len(context.scores)) + "."
+
+
 def yearly_section(context: ReportContext) -> str:
     return (
         """## 8. Theo năm và run kết thúc sớm
@@ -295,20 +305,13 @@ Một episode liên tục; returns compound theo năm của end_date, fees theo 
 
 """
         + table(
-            [
-                row
-                for row in context.years
-                if row["scenario_id"] in {item["scenario_id"] for item in context.primary}
-            ],
+            _primary_years(context),
             YEARLY_COLUMNS,
         )
         + """
 
 Run insolvent: """
-        + str(sum((row["status"] == "insolvent" for row in context.scores)))
-        + "/"
-        + str(len(context.scores))
-        + "."
+        + _insolvency_summary(context)
     )
 
 
