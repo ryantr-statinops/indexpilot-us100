@@ -66,3 +66,13 @@ def test_normalize_yahoo_multilevel_columns():
     result = normalize_download(frame)
     assert result.equals(process_source_table(source()))
     pd.testing.assert_frame_equal(frame, original)
+
+
+def test_archived_csv_rebuild_matches_processed_snapshot(tmp_path):
+    from indexpilot_us100.data.download import process_raw_csv
+
+    raw = tmp_path / 'snapshot_raw.csv'
+    source().write_csv(raw)
+    output = tmp_path / 'restored' / 'snapshot_processed.parquet'
+    assert process_raw_csv(raw, output) == output
+    assert pl.read_parquet(output).equals(process_source_table(source()))
