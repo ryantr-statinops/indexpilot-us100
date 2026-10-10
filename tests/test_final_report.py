@@ -59,7 +59,8 @@ def test_report_section_composition_and_optional_figures(tmp_path):
 
 @pytest.mark.parametrize("label", [None, "QQQ / Nasdaq-100 ETF"])
 def test_report_identity_is_not_hardcoded(tmp_path, label):
-    from indexpilot_us100.evaluation.final.report import load_report_context, research_section
+    from indexpilot_us100.evaluation.final import load_report_context
+    from indexpilot_us100.evaluation.final.report import research_section
 
     data, source, config = source_fixture(tmp_path)
     root = tmp_path / "report"
@@ -87,7 +88,8 @@ def test_report_identity_is_not_hardcoded(tmp_path, label):
 def test_report_replay_commands_use_actual_paths(tmp_path):
     import shlex
 
-    from indexpilot_us100.evaluation.final.report import load_report_context, reproduction_section
+    from indexpilot_us100.evaluation.final import load_report_context
+    from indexpilot_us100.evaluation.final.report import reproduction_section
 
     data, source, config = source_fixture(tmp_path)
     root = tmp_path / "QQQ run with spaces"
@@ -113,7 +115,8 @@ def test_report_replay_commands_use_actual_paths(tmp_path):
 
 
 def test_report_outlook_is_single_asset(tmp_path):
-    from indexpilot_us100.evaluation.final.report import load_report_context, reproduction_section
+    from indexpilot_us100.evaluation.final import load_report_context
+    from indexpilot_us100.evaluation.final.report import reproduction_section
 
     data, source, config = source_fixture(tmp_path)
     root = tmp_path / "outlook"

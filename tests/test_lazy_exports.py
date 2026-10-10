@@ -164,3 +164,80 @@ def test_public_facades_resolve_declared_names_to_original_objects():
             expected = getattr(import_module(relative_module, package_name), name)
             assert getattr(package, name) is expected
             assert getattr(package, name) is expected
+
+
+def test_package_facades_import_in_both_cyclic_orders():
+    import subprocess
+    import sys
+
+    scripts = (
+        """
+from indexpilot_us100.agents import QLearningAgent
+from indexpilot_us100.environment import TradingEnvironment
+from indexpilot_us100.agents import QLearningAgent as CachedAgent
+assert CachedAgent is QLearningAgent
+assert TradingEnvironment.__module__ == 'indexpilot_us100.environment.trading'
+""",
+        """
+from indexpilot_us100.environment import TradingEnvironment
+from indexpilot_us100.agents import QLearningAgent
+assert TradingEnvironment.__module__ == 'indexpilot_us100.environment.trading'
+assert QLearningAgent.__module__ == 'indexpilot_us100.agents.qlearning'
+""",
+        """
+from indexpilot_us100.evaluation.final import RunManifest, check_complete
+from indexpilot_us100.evaluation import file_hash
+assert RunManifest is not None and callable(check_complete) and callable(file_hash)
+""",
+        """
+from indexpilot_us100.evaluation import file_hash
+from indexpilot_us100.evaluation.final import RunManifest, check_complete
+assert RunManifest is not None and callable(check_complete) and callable(file_hash)
+""",
+    )
+    for script in scripts:
+        result = subprocess.run(
+            [sys.executable, "-c", script], capture_output=True, text=True, check=False
+        )
+        assert result.returncode == 0, result.stderr
+
+
+def test_importing_packages_does_not_load_optional_dependencies():
+    import subprocess
+    import sys
+
+    script = """
+import builtins
+real_import = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name.split('.')[0] in {'numpy', 'polars', 'yfinance', 'finplot', 'PyQt6'}:
+        raise AssertionError(f'package import eagerly loaded {name}')
+    return real_import(name, *args, **kwargs)
+builtins.__import__ = guarded
+import indexpilot_us100.metrics
+import indexpilot_us100.portfolio
+import indexpilot_us100.agents
+import indexpilot_us100.environment
+import indexpilot_us100.data
+import indexpilot_us100.evaluation
+import indexpilot_us100.evaluation.final
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_chart_facade_defers_finplot_until_chart_creation():
+    import subprocess
+    import sys
+
+    script = """
+import sys
+from indexpilot_us100.evaluation import create_chart
+assert 'finplot' not in sys.modules
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
