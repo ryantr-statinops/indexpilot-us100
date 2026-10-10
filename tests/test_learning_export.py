@@ -6,10 +6,9 @@ import pytest
 from test_reconciliation import synthetic_market
 from test_training import config
 
-from indexpilot_us100.agents.qlearning import QLearningAgent
-from indexpilot_us100.agents.training import run_experiments
-from indexpilot_us100.evaluation.learning_export import export_learning
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.agents import QLearningAgent, run_experiments
+from indexpilot_us100.evaluation import export_learning
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def test_model_artifacts(tmp_path):
@@ -51,7 +50,7 @@ def test_destination_is_checked_before_training(tmp_path):
 
 
 def test_selected_model_chart_adapter(tmp_path):
-    from indexpilot_us100.evaluation.chart import load_chart_series
+    from indexpilot_us100.evaluation import load_chart_series
 
     experiments, selection = run_experiments(synthetic_market(), SimulationConfig(), config())
     source = tmp_path / "source.parquet"

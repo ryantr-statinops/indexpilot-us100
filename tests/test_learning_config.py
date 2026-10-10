@@ -1,6 +1,6 @@
 import pytest
 
-from indexpilot_us100.agents.config import LearningConfig, load_learning_config
+from indexpilot_us100.agents import LearningConfig, load_learning_config
 
 
 def test_schedule():
