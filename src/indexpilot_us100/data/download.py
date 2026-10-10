@@ -55,6 +55,17 @@ def _normalize_source_columns(data: pl.DataFrame) -> pl.DataFrame:
     return data
 
 
+def _derive_adjusted_returns(data: pl.DataFrame) -> pl.DataFrame:
+    data = data.with_columns(
+        (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
+        pl.col("adj_close").pct_change().alias("simple_return"),
+        (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
+        (pl.col("open") * pl.col("adj_close") / pl.col("close")).pct_change().alias("open_to_open_return"),
+    )
+    return data
+
+
+
 def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
     """Validate the normalized source columns and add adjusted-close returns."""
     data = _normalize_source_columns(data)
@@ -70,13 +81,7 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
     if data.get_column("date").null_count():
         raise ValueError("Some rows have invalid dates.")
 
-    data = data.with_columns(
-        (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
-        pl.col("adj_close").pct_change().alias("simple_return"),
-        (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
-        (pl.col("open") * pl.col("adj_close") / pl.col("close")).pct_change().alias("open_to_open_return"),
-    )
-    return data
+    return _derive_adjusted_returns(data)
 
 
 def normalize_download(frame: Any) -> pl.DataFrame:
