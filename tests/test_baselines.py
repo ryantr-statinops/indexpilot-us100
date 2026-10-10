@@ -1,8 +1,7 @@
 import pytest
 from test_simulator import market
 
-from indexpilot_us100.portfolio.baselines import BuyHoldPolicy, CashPolicy
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.portfolio import BuyHoldPolicy, CashPolicy, run_episode
 
 
 def test_cash():
@@ -22,7 +21,7 @@ def test_buy_hold():
 
 
 def test_fixed_exposure_rebalances():
-    from indexpilot_us100.portfolio.baselines import FixedExposurePolicy
+    from indexpilot_us100.portfolio import FixedExposurePolicy
 
     for value in (0.5, -0.5):
         result = run_episode(market(), FixedExposurePolicy(value, "fixed"))
@@ -34,7 +33,7 @@ def test_fixed_exposure_rebalances():
 
 
 def test_sma_and_random():
-    from indexpilot_us100.portfolio.baselines import RandomPolicy, SMAPolicy, baseline_policies
+    from indexpilot_us100.portfolio import RandomPolicy, SMAPolicy, baseline_policies
 
     sma = run_episode(market(), SMAPolicy())
     assert sma.orders[0]["date"] == market().dates[23]

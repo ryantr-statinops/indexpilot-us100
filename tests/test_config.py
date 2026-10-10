@@ -1,6 +1,6 @@
 import pytest
 
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def test_defaults():
