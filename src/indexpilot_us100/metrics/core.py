@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from indexpilot_us100.portfolio.simulator import SimulationResult
+from indexpilot_us100.portfolio import SimulationResult
 
 
 @dataclass(frozen=True)

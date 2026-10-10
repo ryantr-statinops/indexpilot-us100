@@ -5,10 +5,9 @@ import tomllib
 
 import polars as pl
 
-from indexpilot_us100.agents.config import load_learning_config
-from indexpilot_us100.agents.training import run_experiments
+from indexpilot_us100.agents import load_learning_config, run_experiments
 from indexpilot_us100.metrics import compute_metrics
-from indexpilot_us100.portfolio.market import load_market_data
+from indexpilot_us100.portfolio import load_market_data
 
 from .cli import comparison_table
 from .learning_export import export_learning, validate_learning_destination

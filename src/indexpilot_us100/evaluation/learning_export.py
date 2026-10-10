@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 
-from indexpilot_us100.agents.state import ACTIONS, BIN_EDGES, FEATURE_NAMES, STATE_COUNT
+from indexpilot_us100.agents import ACTIONS, BIN_EDGES, FEATURE_NAMES, STATE_COUNT
 from indexpilot_us100.metrics import compute_metrics
 
 from .export import export_results, file_hash, git_revision, write_json
