@@ -9,7 +9,8 @@ from test_market import frame
 from test_simulator import market
 
 
-def test_chart_adapter_without_gui(tmp_path):
+def test_chart_adapter_without_gui(tmp_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, 'finplot', None)
     source = tmp_path / 'source.parquet'
     frame().write_parquet(source)
     result = run_episode(market(), CashPolicy())
@@ -19,7 +20,7 @@ def test_chart_adapter_without_gui(tmp_path):
     assert len(series[0]['times']) == len(result.equity)
     assert list(series[0]['equity']) == [100000] * len(result.equity)
     assert list(series[0]['drawdown']) == [0] * len(result.equity)
-    assert 'finplot' not in sys.modules
+    assert sys.modules['finplot'] is None
 
 
 def test_missing_optional_dependency(monkeypatch):
