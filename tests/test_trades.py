@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from indexpilot_us100.portfolio.account import Account, TargetExposure, rebalance
+from indexpilot_us100.portfolio import Account, TargetExposure, rebalance
 from indexpilot_us100.portfolio.trades import TradeTracker
 from indexpilot_us100.portfolio.transition import liquidate
 

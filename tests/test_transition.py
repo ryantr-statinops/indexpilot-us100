@@ -1,6 +1,6 @@
 import pytest
 
-from indexpilot_us100.portfolio.account import Account, TargetExposure
+from indexpilot_us100.portfolio import Account, TargetExposure
 from indexpilot_us100.portfolio.transition import advance_interval
 
 
