@@ -16,6 +16,7 @@ QQQ is an ETF proxy for Nasdaq-100; the project operates on one price series and
 - To see what the RL agent learned: [07 — Results](07-results.md).
 - To replay the exact experiment: [08 — Reproduction](08-reproduction.md).
 - To contribute or refactor: [Development workflow](development.md).
+- To import Python APIs: [Package API and imports](package-api.md).
 
 For example, if you only want to view equity and drawdown, restore the saved artifacts and use `indexpilot-chart`. To check whether the results can actually be reproduced, also restore the exact snapshot and models, then use `indexpilot-evaluate verify`. These tasks have different prerequisites.
 
@@ -31,6 +32,7 @@ For example, if you only want to view equity and drawdown, restore the saved art
 | [06 — Evaluation](06-evaluation.md) | Locked protocol, 60 scenarios, diagnostics, resume, and verification |
 | [07 — Results](07-results.md) | Validation/test results, activity, seeds, costs, and limitations |
 | [08 — Reproduction](08-reproduction.md) | Archive restore, runtime/hashes, report/chart, and troubleshooting |
+| [Package API and imports](package-api.md) | Public package facades, import paths, lazy loading, and optional chart dependencies |
 
 Additional experiment records:
 

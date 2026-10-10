@@ -1,6 +1,6 @@
 # Development workflow
 
-Use small, sequential changes on `dev`. Each commit contains one file and one independent task. Check the staged diff, run the relevant checks, commit, and push before starting the next change. Add a new shared module before switching its callers; preserve existing imports when moving an interface.
+Use small, sequential changes on `dev`. Each commit should represent one independently reviewable task and may include multiple related files. Check the staged diff, run the relevant checks, then commit and push before starting the next task. Add a new shared module before switching its callers; preserve existing imports when moving an interface.
 
 ## Code conventions
 
@@ -56,7 +56,7 @@ Push completed changes to `dev` in commit order. Prepare the `dev` to `main` PR 
 
 ## Package API and imports
 
-Import public interfaces through their package facade. Keep implementation-to-implementation imports direct and relative within the same package; a package should not import another package's private modules.
+Import public interfaces through their package facade. Keep implementation-to-implementation imports direct and relative within the same package; a package should not import another package's private modules. See the [package API guide](package-api.md) for the public package map and usage examples.
 
 ```python
 from indexpilot_us100.agents import QLearningAgent
