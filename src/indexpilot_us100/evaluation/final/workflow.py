@@ -83,6 +83,14 @@ def summarize(
     return manifest
 
 
+def _test_segment(protocol: FrozenProtocol):
+    return build_test_segment(
+        load_market_data(protocol["input_file"]),
+        evaluation_config(protocol),
+        SimulationConfig(**protocol["simulation_config"]),
+    )
+
+
 def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     root = Path(protocol_dir)
     protocol = validate_protocol(root, input_path)
@@ -110,11 +118,7 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
             model_hashes=[row["sha256"] for row in protocol["models"]],
         )
         try:
-            segment = build_test_segment(
-                load_market_data(protocol["input_file"]),
-                evaluation_config(protocol),
-                SimulationConfig(**protocol["simulation_config"]),
-            )
+            segment = _test_segment(protocol)
             scores = []
             for scenario in scenarios(protocol):
                 directory = frozen_path(root, "runs/" + scenario["scenario_id"])
@@ -186,11 +190,7 @@ def verify_evaluation(protocol_dir, input_path=None, progress=None) -> Path:
         check_complete(root, protocol)
         replay = Path(tempfile.mkdtemp(prefix="verification-", dir=root))
         try:
-            segment = build_test_segment(
-                load_market_data(protocol["input_file"]),
-                evaluation_config(protocol),
-                SimulationConfig(**protocol["simulation_config"]),
-            )
+            segment = _test_segment(protocol)
             scores = []
             for scenario in scenarios(protocol):
                 scores.append(
