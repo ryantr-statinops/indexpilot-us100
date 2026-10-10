@@ -60,10 +60,11 @@ def _derive_adjusted_returns(data: pl.DataFrame) -> pl.DataFrame:
         (pl.col("open") * pl.col("adj_close") / pl.col("close")).alias("adj_open"),
         pl.col("adj_close").pct_change().alias("simple_return"),
         (pl.col("adj_close").log() - pl.col("adj_close").shift(1).log()).alias("log_return"),
-        (pl.col("open") * pl.col("adj_close") / pl.col("close")).pct_change().alias("open_to_open_return"),
+        (pl.col("open") * pl.col("adj_close") / pl.col("close"))
+        .pct_change()
+        .alias("open_to_open_return"),
     )
     return data
-
 
 
 def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
@@ -73,8 +74,16 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
     data = (
         data.with_columns(pl.col("date").cast(pl.Date, strict=False))
         .select(
-            "date", "open", "high", "low", "close", "adj_close", "volume",
-            "dividends", "stock_splits", "capital_gains",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "adj_close",
+            "volume",
+            "dividends",
+            "stock_splits",
+            "capital_gains",
         )
         .sort("date")
     )
@@ -131,9 +140,7 @@ def _snapshot_quality(normalized: pl.DataFrame) -> dict[str, Any]:
         )
     ).height
     null_counts = {
-        name: count
-        for name, count in normalized.null_count().row(0, named=True).items()
-        if count
+        name: count for name, count in normalized.null_count().row(0, named=True).items() if count
     }
     return {
         "duplicate_date_rows": duplicate_dates,
@@ -142,7 +149,15 @@ def _snapshot_quality(normalized: pl.DataFrame) -> dict[str, Any]:
     }
 
 
-def _snapshot_manifest(ticker: str, start: str, end: str, normalized: pl.DataFrame, raw_path: Path, processed_path: Path, quality: dict[str, Any]) -> dict[str, Any]:
+def _snapshot_manifest(
+    ticker: str,
+    start: str,
+    end: str,
+    normalized: pl.DataFrame,
+    raw_path: Path,
+    processed_path: Path,
+    quality: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "provider": "Yahoo Finance via yfinance",
         "ticker": ticker,
@@ -178,9 +193,10 @@ def _snapshot_manifest(ticker: str, start: str, end: str, normalized: pl.DataFra
 def _write_snapshot_files(normalized: pl.DataFrame, raw_path: Path, processed_path: Path) -> None:
     # Persist the normalized source response including adjusted close and corporate actions.
     # The processed file below adds derived returns and uses Polars' typed Parquet output.
-    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
+    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(
+        raw_path
+    )
     normalized.write_parquet(processed_path)
-
 
 
 def _write_snapshot_manifest(manifest_path: Path, manifest: dict[str, Any]) -> None:
@@ -223,7 +239,9 @@ def process_raw_csv(raw_path: Path, processed_path: Path) -> Path:
 
 def process_main(argv: list[str] | None = None) -> int:
     """CLI entry point for reprocessing an archived raw CSV snapshot."""
-    parser = argparse.ArgumentParser(description="Reprocess an archived normalized Yahoo Finance CSV")
+    parser = argparse.ArgumentParser(
+        description="Reprocess an archived normalized Yahoo Finance CSV"
+    )
     parser.add_argument("raw_csv", type=Path, help="Raw CSV written by indexpilot-fetch")
     parser.add_argument("--output", type=Path, help="Output Parquet path")
     args = parser.parse_args(argv)
