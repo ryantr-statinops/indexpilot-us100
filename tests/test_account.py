@@ -1,6 +1,6 @@
 import pytest
 
-from indexpilot_us100.portfolio.account import Account
+from indexpilot_us100.portfolio import Account
 
 
 def test_valuation():
@@ -15,7 +15,7 @@ def test_valuation():
 
 
 def test_free_rebalance_and_hold():
-    from indexpilot_us100.portfolio.account import HoldPosition, TargetExposure, rebalance
+    from indexpilot_us100.portfolio import HoldPosition, TargetExposure, rebalance
 
     account = Account(100000)
     for target in (-1.0, -0.5, 0.0, 0.5, 1.0):
@@ -30,7 +30,7 @@ def test_free_rebalance_and_hold():
 
 
 def test_costed_target_and_hand_example():
-    from indexpilot_us100.portfolio.account import TargetExposure, rebalance
+    from indexpilot_us100.portfolio import TargetExposure, rebalance
 
     after, order = rebalance(Account(100000), 100, TargetExposure(1), 0.001)
     assert order.traded_notional == pytest.approx(99900.0999001)
@@ -44,7 +44,7 @@ def test_costed_target_and_hand_example():
 @pytest.mark.parametrize("old", [-1, -0.5, 0, 0.5, 1])
 @pytest.mark.parametrize("new", [-1, -0.5, 0, 0.5, 1])
 def test_costed_reversals(old, new):
-    from indexpilot_us100.portfolio.account import TargetExposure, rebalance
+    from indexpilot_us100.portfolio import TargetExposure, rebalance
 
     account = Account(100000 - old * 100000, old * 1000)
     after, order = rebalance(account, 100, TargetExposure(new), 0.001)

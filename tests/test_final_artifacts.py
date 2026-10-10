@@ -3,12 +3,11 @@ from dataclasses import replace
 import pytest
 from final_helpers import source_fixture
 
+from indexpilot_us100.evaluation.final import prepare_protocol
 from indexpilot_us100.evaluation.final.artifacts import check_run, store_run
 from indexpilot_us100.evaluation.final.matrix import evaluate_scenario, scenarios
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol
 from indexpilot_us100.evaluation.final.windows import build_test_segment
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import load_market_data
+from indexpilot_us100.portfolio import SimulationConfig, load_market_data
 
 
 def test_atomic_scenario_roundtrip(tmp_path):

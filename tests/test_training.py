@@ -1,9 +1,8 @@
 import numpy as np
 from test_reconciliation import synthetic_market
 
-from indexpilot_us100.agents.config import LearningConfig
-from indexpilot_us100.agents.training import chronological_segments, run_experiments
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.agents import LearningConfig, chronological_segments, run_experiments
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def config():
@@ -36,7 +35,7 @@ def test_split_and_repeated_learning():
 
 
 def test_reserved_test_values_never_change_learning():
-    from indexpilot_us100.portfolio.market import MarketData
+    from indexpilot_us100.portfolio import MarketData
 
     data = synthetic_market()
     opens, closes = data.opens.copy(), data.closes.copy()
@@ -52,7 +51,7 @@ def test_reserved_test_values_never_change_learning():
 
 
 def test_validation_prices_do_not_fit_q_table():
-    from indexpilot_us100.portfolio.market import MarketData
+    from indexpilot_us100.portfolio import MarketData
 
     data = synthetic_market()
     opens, closes = data.opens.copy(), data.closes.copy()
@@ -68,7 +67,7 @@ def test_validation_prices_do_not_fit_q_table():
 
 
 def test_undefined_validation_does_not_invent_a_winner():
-    from indexpilot_us100.portfolio.market import MarketData
+    from indexpilot_us100.portfolio import MarketData
 
     data = synthetic_market()
     flat = MarketData(
