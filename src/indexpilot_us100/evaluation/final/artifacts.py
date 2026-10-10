@@ -1,16 +1,19 @@
 """Atomic scenario artifacts and integrity-checked resumable results."""
 
-from typing import Any
 import json
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
+from typing import Any
+
 import polars as pl
+
 from indexpilot_us100.metrics import compute_metrics
+
 from ..export import export_results, file_hash, write_json
 from ..learning_export import trajectory_records
-from .protocol import frozen_path
 from .diagnostics import policy_diagnostics
+from .protocol import frozen_path
 from .runner import EvaluatedRun
 from .types import FrozenProtocol, ScoreRow
 
