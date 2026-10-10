@@ -3,15 +3,15 @@
 import json
 from typing import get_type_hints
 
-from indexpilot_us100.evaluation.final.runner import EvaluatedRun
-from indexpilot_us100.evaluation.final.types import (
+from indexpilot_us100.evaluation.final import (
     Coverage,
     ModelInventory,
     RunManifest,
     Scenario,
     ScoreRow,
 )
-from indexpilot_us100.portfolio.simulator import SimulationResult
+from indexpilot_us100.evaluation.final.runner import EvaluatedRun
+from indexpilot_us100.portfolio import SimulationResult
 
 
 def test_types_remain_plain_json_dictionaries():

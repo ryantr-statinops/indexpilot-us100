@@ -2,12 +2,11 @@ from dataclasses import replace
 
 from final_helpers import source_fixture
 
-from indexpilot_us100.agents.qlearning import QLearningAgent
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol
+from indexpilot_us100.agents import QLearningAgent
+from indexpilot_us100.evaluation.final import prepare_protocol
 from indexpilot_us100.evaluation.final.runner import evaluate_frozen_policy
 from indexpilot_us100.evaluation.final.windows import build_test_segment
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import load_market_data
+from indexpilot_us100.portfolio import SimulationConfig, load_market_data
 
 
 def test_immutable_greedy_eval(tmp_path, monkeypatch):
@@ -34,7 +33,7 @@ def test_baselines_are_not_duplicated():
 
     from test_simulator import market
 
-    from indexpilot_us100.evaluation.final.config import EvaluationConfig
+    from indexpilot_us100.evaluation.final import EvaluationConfig
     from indexpilot_us100.evaluation.final.runner import baseline_scenarios, evaluate_baseline
 
     protocol = {
