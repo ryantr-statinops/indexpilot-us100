@@ -35,8 +35,7 @@ def _column_name(column: Any) -> str:
     return str(parts[-1]).strip().lower().replace(" ", "_")
 
 
-def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
-    """Validate the normalized source columns and add adjusted-close returns."""
+def _normalize_source_columns(data: pl.DataFrame) -> pl.DataFrame:
     if data.is_empty():
         raise ValueError("Source data contains no rows.")
     if "date" not in data.columns:
@@ -52,6 +51,13 @@ def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
     for optional in ("dividends", "stock_splits", "capital_gains"):
         if optional not in data.columns:
             data = data.with_columns(pl.lit(0.0).alias(optional))
+
+    return data
+
+
+def process_source_table(data: pl.DataFrame) -> pl.DataFrame:
+    """Validate the normalized source columns and add adjusted-close returns."""
+    data = _normalize_source_columns(data)
 
     data = (
         data.with_columns(pl.col("date").cast(pl.Date, strict=False))
