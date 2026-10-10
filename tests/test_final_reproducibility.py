@@ -11,8 +11,13 @@ import pytest
 from final_helpers import source_fixture
 
 from indexpilot_us100.evaluation import file_hash
-from indexpilot_us100.evaluation.final import prepare_protocol, validate_protocol
-from indexpilot_us100.evaluation.final.workflow import ledger_for, run_evaluation, verify_evaluation
+from indexpilot_us100.evaluation.final import (
+    prepare_protocol,
+    run_evaluation,
+    validate_protocol,
+    verify_evaluation,
+)
+from indexpilot_us100.evaluation.final.workflow import ledger_for
 
 
 def test_interrupted_run_resumes_only_unfinished_scenarios(tmp_path, monkeypatch):
