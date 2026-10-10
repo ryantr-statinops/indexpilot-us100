@@ -64,3 +64,27 @@ def test_profit_factor_and_calmar_edges():
     assert calmar_ratio(Metric(0), 0).status == "undefined"
     metrics = compute_metrics(run_episode(market(), CashPolicy())).metrics
     assert set(metrics) == {"max_drawdown", "sharpe", "cagr", "profit_factor", "calmar"}
+
+
+def test_metrics_types_keep_legacy_pickle_module_identity():
+    import base64
+    import pickle
+
+    from indexpilot_us100.metrics import Metric, MetricsReport
+
+    legacy_pickle = base64.b64decode(
+        "gASVyAAAAAAAAACMGGluZGV4cGlsb3RfdXMxMDAubWV0cmljc5SMDU1ldHJpY3NSZXBvcnSUk5QpgZR9lCiM"
+        "B3N1bW1hcnmUfZSMCGJhc2VsaW5llIwGbGVnYWN5lHOMB21ldHJpY3OUfZQojAZzaGFycGWUaACMBk1ldHJp"
+        "Y5STlCmBlH2UKIwFdmFsdWWURz/0AAAAAAAAjAZzdGF0dXOUjAZmaW5pdGWUdWKMBGNhZ3KUaA0pgZR9lCho"
+        "EE5oEYwJdW5kZWZpbmVklHVidXViLg=="
+    )
+    legacy_report = pickle.loads(legacy_pickle)
+    assert type(legacy_report) is MetricsReport
+    assert type(legacy_report.metrics["sharpe"]) is Metric
+    assert legacy_report.summary == {"baseline": "legacy"}
+
+    current_report = MetricsReport({"baseline": "current"}, {"sharpe": Metric(1.25)})
+    restored_report = pickle.loads(pickle.dumps(current_report))
+    assert type(restored_report) is MetricsReport
+    assert type(restored_report.metrics["sharpe"]) is Metric
+    assert restored_report.row()["sharpe"] == 1.25
