@@ -1,6 +1,6 @@
 from dataclasses import asdict
 
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
+from indexpilot_us100.evaluation.final import EvaluationConfig
 from indexpilot_us100.evaluation.final.matrix import scenarios
 
 

@@ -3,10 +3,10 @@ from dataclasses import asdict
 import pytest
 from test_simulator import market
 
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
+from indexpilot_us100.evaluation.final import EvaluationConfig
 from indexpilot_us100.evaluation.final.diagnostics import policy_diagnostics
 from indexpilot_us100.evaluation.final.runner import evaluate_baseline
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def test_activity_is_not_previous_exposure():
