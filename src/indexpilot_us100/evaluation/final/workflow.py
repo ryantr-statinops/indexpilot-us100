@@ -128,6 +128,20 @@ def _recover_completed_event(history: ExperimentLedger, protocol: FrozenProtocol
         )
 
 
+def _execute_scenarios(root: Path, protocol: FrozenProtocol, segment, output_root: Path, completed: list[str], progress=None, history: ExperimentLedger | None = None) -> list[ScoreRow]:
+    scores = []
+    for scenario in scenarios(protocol):
+        if history is not None:
+            score = _run_or_reuse_scenario(root, protocol, segment, scenario, history)
+        else:
+            score = store_run(output_root, protocol, evaluate_scenario(root, protocol, segment, scenario))
+        scores.append(score)
+        completed.append(scenario["scenario_id"])
+        if progress:
+            progress(scenario["scenario_id"])
+    return scores
+
+
 def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     root = Path(protocol_dir)
     protocol = validate_protocol(root, input_path)
@@ -146,13 +160,7 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
         )
         try:
             segment = _test_segment(protocol)
-            scores = []
-            for scenario in scenarios(protocol):
-                score = _run_or_reuse_scenario(root, protocol, segment, scenario, history)
-                scores.append(score)
-                completed.append(scenario["scenario_id"])
-                if progress:
-                    progress(scenario["scenario_id"])
+            scores = _execute_scenarios(root, protocol, segment, root, completed, progress, history)
             validate_protocol(root, input_path)
             manifest = summarize(
                 root,
@@ -206,15 +214,7 @@ def verify_evaluation(protocol_dir, input_path=None, progress=None) -> Path:
         replay = Path(tempfile.mkdtemp(prefix="verification-", dir=root))
         try:
             segment = _test_segment(protocol)
-            scores = []
-            for scenario in scenarios(protocol):
-                scores.append(
-                    store_run(
-                        replay, protocol, evaluate_scenario(root, protocol, segment, scenario)
-                    )
-                )
-                if progress:
-                    progress(scenario["scenario_id"])
+            scores = _execute_scenarios(root, protocol, segment, replay, [], progress)
             summarize(
                 replay,
                 protocol,
