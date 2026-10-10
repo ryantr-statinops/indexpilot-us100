@@ -1,6 +1,6 @@
 """Declared scenario matrix; never rank policies or seeds on test."""
 
-from indexpilot_us100.portfolio.market import MarketData
+from indexpilot_us100.portfolio import MarketData
 
 from .runner import EvaluatedRun, baseline_scenarios, evaluate_baseline, evaluate_frozen_policy
 from .types import FrozenProtocol, Scenario

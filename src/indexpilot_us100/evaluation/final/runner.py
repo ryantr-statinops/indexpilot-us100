@@ -2,13 +2,17 @@
 
 from dataclasses import dataclass, field, replace
 
-from indexpilot_us100.agents.config import LearningConfig
-from indexpilot_us100.agents.qlearning import QLearningAgent
-from indexpilot_us100.environment.trading import TradingEnvironment, Trajectory
-from indexpilot_us100.portfolio.account import HoldPosition, TargetExposure
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import MarketData
-from indexpilot_us100.portfolio.simulator import Observation, Policy, SimulationResult
+from indexpilot_us100.agents import LearningConfig, QLearningAgent
+from indexpilot_us100.environment import TradingEnvironment, Trajectory
+from indexpilot_us100.portfolio import (
+    HoldPosition,
+    MarketData,
+    Observation,
+    Policy,
+    SimulationConfig,
+    SimulationResult,
+    TargetExposure,
+)
 
 from .protocol import frozen_path
 from .types import DecisionRecord, FrozenProtocol, Scenario
@@ -71,7 +75,7 @@ def evaluate_frozen_policy(
 
 
 def baseline_scenarios(protocol: FrozenProtocol, cost_bps: float) -> list[Scenario]:
-    from indexpilot_us100.portfolio.baselines import baseline_policies
+    from indexpilot_us100.portfolio import baseline_policies
 
     config = protocol["evaluation_config"]
     rows = []
@@ -93,8 +97,7 @@ def baseline_scenarios(protocol: FrozenProtocol, cost_bps: float) -> list[Scenar
 def evaluate_baseline(
     protocol: FrozenProtocol, segment: MarketData, scenario: Scenario
 ) -> EvaluatedRun:
-    from indexpilot_us100.portfolio.baselines import baseline_policies
-    from indexpilot_us100.portfolio.simulator import run_episode
+    from indexpilot_us100.portfolio import baseline_policies, run_episode
 
     matches = [policy for policy in baseline_policies() if policy.name == scenario["policy"]]
     if len(matches) != 1:
@@ -114,8 +117,8 @@ class RecordingPolicy:
         self.policy.reset(seed)
 
     def decide(self, observation: Observation) -> TargetExposure | HoldPosition:
-        from indexpilot_us100.agents.state import encode_state
-        from indexpilot_us100.portfolio.account import TargetExposure
+        from indexpilot_us100.agents import encode_state
+        from indexpilot_us100.portfolio import TargetExposure
 
         action = self.policy.decide(observation)
         self.decisions.append(
