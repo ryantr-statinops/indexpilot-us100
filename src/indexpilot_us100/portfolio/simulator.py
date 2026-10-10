@@ -7,7 +7,7 @@ from .config import SimulationConfig
 from .market import MarketData, MarketFeatures, decision_indices, market_features
 from .records import account_event, order_record
 from .trades import TradeTracker
-from .transition import advance_interval, interval_reward, liquidate
+from .transition import Interval, Reward, advance_interval, interval_reward, liquidate
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ def _finalize_rejected_rebalance(account: Account, day: date, price: float, cost
     previous['reward'] -= final.execution.fee / previous['start_equity']
     previous['end_equity'] = closed['equity']
     previous['net_return'] = closed['equity'] / previous['start_equity'] - 1
-    equity[-1] = {**closed, 'net_return': previous['net_return'], 'reward': previous['reward']}
+    equity[-1] = _equity_record(closed, previous['net_return'], previous['reward'])
     return final
 
 
@@ -90,6 +90,19 @@ def _liquidate_position(account: Account, day: date, price: float, cost_rate: fl
     recorder.record_order(day, final.execution, 'liquidation')
     closed = recorder.event(final.account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
     return final, closed
+
+
+def _interval_record(day: date, next_day: date, before: float, end_equity: float, interval: Interval, reward: Reward, closing_fee: float, net_return: float) -> dict:
+    return dict(
+        date=day, end_date=next_day, start_equity=before, end_equity=end_equity,
+        gross_pnl=interval.gross_pnl, gross_return=reward.gross_return,
+        fees=interval.execution.fee + closing_fee, cost_fraction=reward.cost_fraction,
+        risk=reward.risk, reward=reward.value, net_return=net_return,
+    )
+
+
+def _equity_record(event: dict, net_return: float = 0., reward: float = 0.) -> dict:
+    return {**event, 'net_return': net_return, 'reward': reward}
 
 
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
@@ -105,7 +118,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
 
     first = indices.start
     initial = recorder.event(account, market.dates[first], 'initial', market.opens[first])
-    equity.append({**initial, 'net_return': 0., 'reward': 0.})
+    equity.append(_equity_record(initial))
 
     for index in indices:
         day, next_day = market.dates[index:index+2]
@@ -134,8 +147,8 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
         reward = interval_reward(interval, observation.features.volatility, config.risk_lambda, closing_fee)
         end_equity = account.equity(next_price)
         net_return = end_equity / before - 1
-        intervals.append(dict(date=day, end_date=next_day, start_equity=before, end_equity=end_equity, gross_pnl=interval.gross_pnl, gross_return=reward.gross_return, fees=interval.execution.fee + closing_fee, cost_fraction=reward.cost_fraction, risk=reward.risk, reward=reward.value, net_return=net_return))
-        equity.append({**ledger[-1], 'net_return': net_return, 'reward': reward.value})
+        intervals.append(_interval_record(day, next_day, before, end_equity, interval, reward, closing_fee, net_return))
+        equity.append(_equity_record(ledger[-1], net_return, reward.value))
         if status == 'insolvent':
             break
     return SimulationResult(policy.name, config, status, equity, ledger, orders, tracker.closed, intervals, market.warnings)
