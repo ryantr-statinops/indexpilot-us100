@@ -1,10 +1,10 @@
 """Declared test boundaries, seeds and execution sensitivity."""
 
+import math
+import tomllib
 from dataclasses import dataclass, fields
 from datetime import date
-import math
 from pathlib import Path
-import tomllib
 
 
 @dataclass(frozen=True)
