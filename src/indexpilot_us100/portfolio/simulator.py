@@ -72,10 +72,7 @@ class _EpisodeRecorder:
 
 def _finalize_rejected_rebalance(account: Account, day: date, price: float, cost_rate: float, recorder: _EpisodeRecorder, intervals: list[dict], equity: list[dict], error: ValueError):
     # With extreme short drift, even closing fees can exhaust positive equity.
-    final = liquidate(account, price, cost_rate)
-    account = final.account
-    recorder.record_order(day, final.execution, 'liquidation')
-    closed = recorder.event(account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
+    final, closed = _liquidate_position(account, day, price, cost_rate, recorder)
     if not intervals:
         raise ValueError('Unable to execute initial target') from error
     previous = intervals[-1]
@@ -86,6 +83,13 @@ def _finalize_rejected_rebalance(account: Account, day: date, price: float, cost
     previous['net_return'] = closed['equity'] / previous['start_equity'] - 1
     equity[-1] = {**closed, 'net_return': previous['net_return'], 'reward': previous['reward']}
     return final
+
+
+def _liquidate_position(account: Account, day: date, price: float, cost_rate: float, recorder: _EpisodeRecorder):
+    final = liquidate(account, price, cost_rate)
+    recorder.record_order(day, final.execution, 'liquidation')
+    closed = recorder.event(final.account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
+    return final, closed
 
 
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
@@ -124,11 +128,9 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
         recorder.event(account, next_day, 'mark', next_price)
         closing_fee = 0.
         if index == indices.stop - 1 or account.equity(next_price) <= 0:
-            final = liquidate(account, next_price, config.cost_rate)
+            final, _ = _liquidate_position(account, next_day, next_price, config.cost_rate, recorder)
             account, status = final.account, final.status
             closing_fee = final.execution.fee
-            recorder.record_order(next_day, final.execution, 'liquidation')
-            recorder.event(account, next_day, 'liquidation', next_price, closing_fee, final.execution.traded_notional)
         reward = interval_reward(interval, observation.features.volatility, config.risk_lambda, closing_fee)
         end_equity = account.equity(next_price)
         net_return = end_equity / before - 1
