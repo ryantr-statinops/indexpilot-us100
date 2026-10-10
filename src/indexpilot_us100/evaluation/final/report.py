@@ -240,15 +240,33 @@ def primary_results_section(context: ReportContext) -> str:
     )
 
 
+def _sensitivity_table(context: ReportContext) -> str:
+    return table(
+            [row for row in context.scores if row["kind"] == "rl"],
+            SENSITIVITY_COLUMNS,
+        )
+
+
+def _seed_table(context: ReportContext) -> str:
+    return table(
+            context.seeds,
+            SEED_COLUMNS,
+        )
+
+
+def _paired_table(context: ReportContext) -> str:
+    return table(
+            context.pairs,
+            PAIRED_COLUMNS,
+        )
+
+
 def robustness_section(context: ReportContext) -> str:
     return (
         """## 7. Seed/cost sensitivity và mức hoạt động
 
 """
-        + table(
-            [row for row in context.scores if row["kind"] == "rl"],
-            SENSITIVITY_COLUMNS,
-        )
+        + _sensitivity_table(context)
         + """
 
 ### Thống kê qua seed
@@ -256,19 +274,13 @@ def robustness_section(context: ReportContext) -> str:
 Mean/median/std chỉ dùng metric hữu hạn; sample std cần ít nhất hai giá trị. Số undefined/infinite/not applicable/insolvent vẫn được báo. Baseline xác định không được nhân bản thành năm mẫu. Random là sanity check. Đây là biến thiên quá trình học trên cùng lịch sử, không phải khoảng tin cậy cho lợi nhuận tương lai.
 
 """
-        + table(
-            context.seeds,
-            SEED_COLUMNS,
-        )
+        + _seed_table(context)
         + """
 
 ### Chênh lệch primary − reference cùng seed/cost
 
 """
-        + table(
-            context.pairs,
-            PAIRED_COLUMNS,
-        )
+        + _paired_table(context)
         + """
 
 Sensitivity giữ nguyên Q, nhưng actions có thể đổi vì phí làm equity/exposure/drawdown đi vào state khác. Flat target và exposure trước lệnh là hai đại lượng khác nhau. Nhãn no_trades/sparse_trades/mostly_flat/unseen_states_present/insolvent chỉ giúp diễn giải."""
