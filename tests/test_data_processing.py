@@ -48,3 +48,21 @@ def test_download_manifest_describes_single_asset_snapshot(tmp_path, monkeypatch
     assert "constituent" not in manifest["caveat"]
     assert "Adj Close / Close" in manifest["price_convention"]
     assert set(manifest["files"]) == {paths["raw"].name, paths["processed"].name}
+
+
+def test_normalize_yahoo_multilevel_columns():
+    import pandas as pd
+    from indexpilot_us100.data.download import normalize_download
+
+    frame = pd.DataFrame(
+        [[100., 101., 99., 100., 50., 1000], [50., 51., 49., 50., 50., 2000]],
+        index=pd.to_datetime(['2020-01-02', '2020-01-03']),
+        columns=pd.MultiIndex.from_tuples([
+            ('Open', 'QQQ'), ('High', 'QQQ'), ('Low', 'QQQ'),
+            ('Close', 'QQQ'), ('Adj Close', 'QQQ'), ('Volume', 'QQQ'),
+        ]),
+    )
+    original = frame.copy(deep=True)
+    result = normalize_download(frame)
+    assert result.equals(process_source_table(source()))
+    pd.testing.assert_frame_equal(frame, original)
