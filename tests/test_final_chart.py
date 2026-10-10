@@ -6,9 +6,8 @@ from dataclasses import replace
 import pytest
 from final_helpers import source_fixture
 
-from indexpilot_us100.evaluation.chart import load_chart_series
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol
-from indexpilot_us100.evaluation.final.workflow import run_evaluation
+from indexpilot_us100.evaluation import load_chart_series
+from indexpilot_us100.evaluation.final import prepare_protocol, run_evaluation
 
 
 def test_final_chart_reads_saved_matrix(tmp_path):

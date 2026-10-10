@@ -1,6 +1,6 @@
 import pytest
 
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
+from indexpilot_us100.evaluation.final import EvaluationConfig
 
 
 def test_default_matrix():
