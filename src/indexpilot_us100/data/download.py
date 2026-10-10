@@ -120,6 +120,28 @@ def _download_source(ticker: str, start: str, end: str):
     )
 
 
+def _snapshot_quality(normalized: pl.DataFrame) -> dict[str, Any]:
+    duplicate_dates = normalized.select(pl.col("date").is_duplicated().sum()).item()
+    invalid_price_rows = normalized.filter(
+        pl.any_horizontal(
+            [
+                pl.col(name).is_null() | (pl.col(name) <= 0)
+                for name in ("open", "high", "low", "close", "adj_close", "adj_open")
+            ]
+        )
+    ).height
+    null_counts = {
+        name: count
+        for name, count in normalized.null_count().row(0, named=True).items()
+        if count
+    }
+    return {
+        "duplicate_date_rows": duplicate_dates,
+        "rows_with_null_or_nonpositive_prices": invalid_price_rows,
+        "null_counts_processed": null_counts,
+    }
+
+
 def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
     """Download a ticker, persist source and processed data, and write metadata.
 
@@ -143,20 +165,7 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
     normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
     normalized.write_parquet(processed_path)
 
-    duplicate_dates = normalized.select(pl.col("date").is_duplicated().sum()).item()
-    invalid_price_rows = normalized.filter(
-        pl.any_horizontal(
-            [
-                pl.col(name).is_null() | (pl.col(name) <= 0)
-                for name in ("open", "high", "low", "close", "adj_close", "adj_open")
-            ]
-        )
-    ).height
-    null_counts = {
-        name: count
-        for name, count in normalized.null_count().row(0, named=True).items()
-        if count
-    }
+    quality = _snapshot_quality(normalized)
     manifest = {
         "provider": "Yahoo Finance via yfinance",
         "ticker": ticker,
@@ -174,9 +183,9 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         "rows": normalized.height,
         "first_date": str(normalized.get_column("date").min()),
         "last_date": str(normalized.get_column("date").max()),
-        "duplicate_date_rows": duplicate_dates,
-        "rows_with_null_or_nonpositive_prices": invalid_price_rows,
-        "null_counts_processed": null_counts,
+        "duplicate_date_rows": quality["duplicate_date_rows"],
+        "rows_with_null_or_nonpositive_prices": quality["rows_with_null_or_nonpositive_prices"],
+        "null_counts_processed": quality["null_counts_processed"],
         "files": {
             raw_path.name: {"sha256": _sha256(raw_path)},
             processed_path.name: {"sha256": _sha256(processed_path)},
