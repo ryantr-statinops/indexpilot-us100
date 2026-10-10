@@ -62,8 +62,7 @@ def test_expected_years_follow_market_intervals_and_warmup():
     import numpy as np
 
     from indexpilot_us100.evaluation.final.yearly import expected_yearly_coverage
-    from indexpilot_us100.portfolio.config import SimulationConfig
-    from indexpilot_us100.portfolio.market import MarketData
+    from indexpilot_us100.portfolio import MarketData, SimulationConfig
 
     dates = tuple(date(2023, 11, 29) + timedelta(days=i) for i in range(21)) + (
         date(2023, 12, 28),

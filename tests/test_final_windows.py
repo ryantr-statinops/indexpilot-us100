@@ -3,9 +3,9 @@ from dataclasses import replace
 import pytest
 from test_reconciliation import synthetic_market
 
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
+from indexpilot_us100.evaluation.final import EvaluationConfig
 from indexpilot_us100.evaluation.final.windows import build_test_segment
-from indexpilot_us100.portfolio.config import SimulationConfig
+from indexpilot_us100.portfolio import SimulationConfig
 
 
 def test_test_warmup():
