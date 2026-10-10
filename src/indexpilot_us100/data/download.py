@@ -106,17 +106,8 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
-    """Download a ticker, persist source and processed data, and write metadata.
-
-    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
-    """
-    ticker = ticker.strip().upper()
-    if not ticker:
-        raise ValueError("Ticker must not be blank.")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    frame = yf.download(
+def _download_source(ticker: str, start: str, end: str):
+    return yf.download(
         tickers=ticker,
         start=start,
         end=end,
@@ -127,6 +118,19 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
         threads=False,
         multi_level_index=False,
     )
+
+
+def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
+    """Download a ticker, persist source and processed data, and write metadata.
+
+    ``start`` is inclusive and ``end`` is exclusive, following yfinance's API.
+    """
+    ticker = ticker.strip().upper()
+    if not ticker:
+        raise ValueError("Ticker must not be blank.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    frame = _download_source(ticker, start, end)
     normalized = normalize_download(frame)
 
     prefix = f"{ticker.lower()}_daily_{start}_to_{end}"
