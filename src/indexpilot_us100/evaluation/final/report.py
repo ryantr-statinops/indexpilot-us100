@@ -50,6 +50,79 @@ FINANCIAL_COLUMNS = [
 ]
 
 
+ACCOUNTING_COLUMNS = [
+                ("policy", "Policy"),
+                ("initial_equity", "Initial equity"),
+                ("final_equity", "Final equity"),
+                ("total_fees", "Fees"),
+                ("traded_notional", "Traded notional"),
+                ("normalized_turnover", "Turnover"),
+                ("order_count", "Orders"),
+                ("wins", "Wins"),
+                ("losses", "Losses"),
+                ("breakeven", "Flat P&L"),
+                ("start_date", "Actual start"),
+                ("end_date", "Actual end"),
+                ("interval_count", "Intervals"),
+            ]
+
+SENSITIVITY_COLUMNS = [
+                ("policy", "Policy"),
+                ("seed", "Seed"),
+                ("cost_bps", "bps"),
+                ("net_return", "Return"),
+                ("sharpe", "Sharpe"),
+                ("max_drawdown", "MDD"),
+                ("trade_count", "Trades"),
+                ("active_intervals", "Active"),
+                ("flat_decision_fraction", "Flat actions"),
+                ("unseen_state_fraction", "Unseen states"),
+                ("status", "Status"),
+            ]
+
+SEED_COLUMNS = [
+                ("policy", "Policy"),
+                ("cost_bps", "bps"),
+                ("metric", "Metric"),
+                ("mean", "Mean"),
+                ("median", "Median"),
+                ("sample_std", "Std"),
+                ("minimum", "Min"),
+                ("maximum", "Max"),
+                ("finite_count", "Finite"),
+                ("undefined_count", "Undefined"),
+                ("infinite_count", "∞"),
+                ("not_applicable_count", "N/A"),
+                ("insolvent_count", "Insolvent"),
+            ]
+
+PAIRED_COLUMNS = [
+                (key, key)
+                for key in (
+                    "seed",
+                    "cost_bps",
+                    "net_return_delta",
+                    "sharpe_delta",
+                    "max_drawdown_delta",
+                    "total_fees_delta",
+                    "trade_count_delta",
+                    "active_intervals_delta",
+                )
+            ]
+
+YEARLY_COLUMNS = [
+                ("scenario_id", "Scenario"),
+                ("year", "Year"),
+                ("net_return", "Return"),
+                ("fees", "Fees"),
+                ("active_intervals", "Active"),
+                ("closed_trades", "Trades closed"),
+                ("start_date", "Start"),
+                ("end_date", "End"),
+                ("partial_year", "Partial"),
+            ]
+
+
 @dataclass(frozen=True)
 class ReportContext:
     protocol: FrozenProtocol
@@ -162,21 +235,7 @@ def primary_results_section(context: ReportContext) -> str:
 """
         + table(
             context.primary,
-            [
-                ("policy", "Policy"),
-                ("initial_equity", "Initial equity"),
-                ("final_equity", "Final equity"),
-                ("total_fees", "Fees"),
-                ("traded_notional", "Traded notional"),
-                ("normalized_turnover", "Turnover"),
-                ("order_count", "Orders"),
-                ("wins", "Wins"),
-                ("losses", "Losses"),
-                ("breakeven", "Flat P&L"),
-                ("start_date", "Actual start"),
-                ("end_date", "Actual end"),
-                ("interval_count", "Intervals"),
-            ],
+            ACCOUNTING_COLUMNS,
         )
     )
 
@@ -188,19 +247,7 @@ def robustness_section(context: ReportContext) -> str:
 """
         + table(
             [row for row in context.scores if row["kind"] == "rl"],
-            [
-                ("policy", "Policy"),
-                ("seed", "Seed"),
-                ("cost_bps", "bps"),
-                ("net_return", "Return"),
-                ("sharpe", "Sharpe"),
-                ("max_drawdown", "MDD"),
-                ("trade_count", "Trades"),
-                ("active_intervals", "Active"),
-                ("flat_decision_fraction", "Flat actions"),
-                ("unseen_state_fraction", "Unseen states"),
-                ("status", "Status"),
-            ],
+            SENSITIVITY_COLUMNS,
         )
         + """
 
@@ -211,21 +258,7 @@ Mean/median/std chỉ dùng metric hữu hạn; sample std cần ít nhất hai 
 """
         + table(
             context.seeds,
-            [
-                ("policy", "Policy"),
-                ("cost_bps", "bps"),
-                ("metric", "Metric"),
-                ("mean", "Mean"),
-                ("median", "Median"),
-                ("sample_std", "Std"),
-                ("minimum", "Min"),
-                ("maximum", "Max"),
-                ("finite_count", "Finite"),
-                ("undefined_count", "Undefined"),
-                ("infinite_count", "∞"),
-                ("not_applicable_count", "N/A"),
-                ("insolvent_count", "Insolvent"),
-            ],
+            SEED_COLUMNS,
         )
         + """
 
@@ -234,19 +267,7 @@ Mean/median/std chỉ dùng metric hữu hạn; sample std cần ít nhất hai 
 """
         + table(
             context.pairs,
-            [
-                (key, key)
-                for key in (
-                    "seed",
-                    "cost_bps",
-                    "net_return_delta",
-                    "sharpe_delta",
-                    "max_drawdown_delta",
-                    "total_fees_delta",
-                    "trade_count_delta",
-                    "active_intervals_delta",
-                )
-            ],
+            PAIRED_COLUMNS,
         )
         + """
 
@@ -267,17 +288,7 @@ Một episode liên tục; returns compound theo năm của end_date, fees theo 
                 for row in context.years
                 if row["scenario_id"] in {item["scenario_id"] for item in context.primary}
             ],
-            [
-                ("scenario_id", "Scenario"),
-                ("year", "Year"),
-                ("net_return", "Return"),
-                ("fees", "Fees"),
-                ("active_intervals", "Active"),
-                ("closed_trades", "Trades closed"),
-                ("start_date", "Start"),
-                ("end_date", "End"),
-                ("partial_year", "Partial"),
-            ],
+            YEARLY_COLUMNS,
         )
         + """
 
