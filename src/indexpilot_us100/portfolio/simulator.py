@@ -1,5 +1,5 @@
 """Causal deterministic runner with an event ledger and interval returns."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
 from .account import Account, TargetExposure, HoldPosition
@@ -51,21 +51,27 @@ def _observation(market: MarketData, index: int, account: Account, equity: float
     )
 
 
+@dataclass
+class _EpisodeRecorder:
+    peak: float
+    ledger: list[dict] = field(default_factory=list)
+
+    def event(self, account: Account, day: date, kind: str, price: float, fee: float = 0., notional: float = 0.) -> dict:
+        record = account_event(len(self.ledger), day, kind, account, float(price), fee, notional)
+        self.ledger.append(record)
+        self.peak = max(self.peak, record['equity'])
+        return record
+
+
 def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = SimulationConfig()) -> SimulationResult:
     indices = decision_indices(market, config.risk_window)
     policy.reset(config.seed)
     account = Account(config.initial_equity)
     tracker = TradeTracker()
-    ledger, orders, equity, intervals = [], [], [], []
-    peak = config.initial_equity
+    recorder = _EpisodeRecorder(config.initial_equity)
+    ledger = recorder.ledger
+    orders, equity, intervals = [], [], []
     status = 'completed'
-
-    def event(day, kind, price, fee=0., notional=0.):
-        nonlocal peak
-        record = account_event(len(ledger), day, kind, account, float(price), fee, notional)
-        ledger.append(record)
-        peak = max(peak, record['equity'])
-        return record
 
     def record_order(day, execution, kind):
         if execution.traded_notional:
@@ -73,14 +79,14 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
         tracker.execute(day, execution)
 
     first = indices.start
-    initial = event(market.dates[first], 'initial', market.opens[first])
+    initial = recorder.event(account, market.dates[first], 'initial', market.opens[first])
     equity.append({**initial, 'net_return': 0., 'reward': 0.})
 
     for index in indices:
         day, next_day = market.dates[index:index+2]
         price, next_price = map(float, market.opens[index:index+2])
         before = account.equity(price)
-        observation = _observation(market, index, account, before, peak, config.risk_window)
+        observation = _observation(market, index, account, before, recorder.peak, config.risk_window)
         action = policy.decide(observation)
         try:
             interval = advance_interval(account, price, next_price, action, config.cost_rate)
@@ -91,7 +97,7 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
             final = liquidate(account, price, config.cost_rate)
             account, status = final.account, final.status
             record_order(day, final.execution, 'liquidation')
-            closed = event(day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
+            closed = recorder.event(account, day, 'liquidation', price, final.execution.fee, final.execution.traded_notional)
             if not intervals:
                 raise ValueError('Unable to execute initial target') from error
             previous = intervals[-1]
@@ -104,16 +110,16 @@ def run_episode(market: MarketData, policy: Policy, config: SimulationConfig = S
             break
         account = interval.account
         record_order(day, interval.execution, 'rebalance')
-        event(day, 'execution' if interval.execution.traded_notional else 'hold', price, interval.execution.fee, interval.execution.traded_notional)
+        recorder.event(account, day, 'execution' if interval.execution.traded_notional else 'hold', price, interval.execution.fee, interval.execution.traded_notional)
         tracker.accrue(interval.gross_pnl)
-        event(next_day, 'mark', next_price)
+        recorder.event(account, next_day, 'mark', next_price)
         closing_fee = 0.
         if index == indices.stop - 1 or account.equity(next_price) <= 0:
             final = liquidate(account, next_price, config.cost_rate)
             account, status = final.account, final.status
             closing_fee = final.execution.fee
             record_order(next_day, final.execution, 'liquidation')
-            event(next_day, 'liquidation', next_price, closing_fee, final.execution.traded_notional)
+            recorder.event(account, next_day, 'liquidation', next_price, closing_fee, final.execution.traded_notional)
         reward = interval_reward(interval, observation.features.volatility, config.risk_lambda, closing_fee)
         end_equity = account.equity(next_price)
         net_return = end_equity / before - 1
