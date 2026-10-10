@@ -3,10 +3,8 @@ import sys
 from test_market import frame
 from test_simulator import market
 
-from indexpilot_us100.evaluation.chart import load_chart_series
-from indexpilot_us100.evaluation.export import export_results
-from indexpilot_us100.portfolio.baselines import CashPolicy
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.evaluation import export_results, load_chart_series
+from indexpilot_us100.portfolio import CashPolicy, run_episode
 
 
 def test_chart_adapter_without_gui(tmp_path, monkeypatch):
@@ -26,7 +24,7 @@ def test_chart_adapter_without_gui(tmp_path, monkeypatch):
 def test_missing_optional_dependency(monkeypatch):
     import pytest
 
-    from indexpilot_us100.evaluation.chart import create_chart
+    from indexpilot_us100.evaluation import create_chart
 
     monkeypatch.setitem(sys.modules, "finplot", None)
     with pytest.raises(RuntimeError, match="uv sync"):

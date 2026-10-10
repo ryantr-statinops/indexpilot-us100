@@ -4,9 +4,8 @@ from dataclasses import replace
 import pytest
 from final_helpers import source_fixture
 
+from indexpilot_us100.evaluation.final import prepare_protocol, run_evaluation, verify_evaluation
 from indexpilot_us100.evaluation.final.cli import main
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol
-from indexpilot_us100.evaluation.final.workflow import run_evaluation, verify_evaluation
 
 
 def test_run_cache_verify_and_tamper(tmp_path, monkeypatch):
@@ -83,7 +82,7 @@ def test_completed_manifest_recovers_missing_ledger_event(tmp_path, monkeypatch)
     data, source, config = source_fixture(tmp_path)
     root = tmp_path / "final"
     prepare_protocol(data, source, replace(config, seeds=(42,), costs_bps=(10.0,)), root)
-    from indexpilot_us100.evaluation.final.history import ExperimentLedger
+    from indexpilot_us100.evaluation.final import ExperimentLedger
     from indexpilot_us100.evaluation.final.workflow import ledger_for
 
     original = ExperimentLedger.append

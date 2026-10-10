@@ -3,9 +3,8 @@ from datetime import date
 
 import pytest
 
-from indexpilot_us100.agents.state import STATE_COUNT, encode_state, observation_vector
-from indexpilot_us100.portfolio.market import MarketFeatures
-from indexpilot_us100.portfolio.simulator import Observation
+from indexpilot_us100.agents import STATE_COUNT, encode_state, observation_vector
+from indexpilot_us100.portfolio import MarketFeatures, Observation
 
 
 def observation():
