@@ -8,7 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from ..export import git_revision
+from indexpilot_us100.evaluation import git_revision
+
 from .protocol import digest
 
 

@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-from ..export import file_hash
+from indexpilot_us100.evaluation import file_hash
+
 from .artifacts import check_run
 from .matrix import scenarios
 from .protocol import frozen_path

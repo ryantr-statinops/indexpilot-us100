@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from .runner import EvaluatedRun
 import numpy as np
 
-from indexpilot_us100.agents.state import ACTIONS
+from indexpilot_us100.agents import ACTIONS
 from indexpilot_us100.metrics import drawdown_curve
 
 
