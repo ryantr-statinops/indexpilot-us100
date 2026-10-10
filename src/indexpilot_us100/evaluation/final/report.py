@@ -3,7 +3,7 @@
 import json
 import shlex
 from pathlib import Path
-from .workflow import check_complete
+from .completion import check_complete
 from dataclasses import dataclass
 from typing import Any
 from .types import FrozenProtocol, ScoreRow, Coverage
