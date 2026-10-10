@@ -1,8 +1,9 @@
 """Validated, serializable experiment settings."""
-from dataclasses import dataclass, fields
+
 import math
-from pathlib import Path
 import tomllib
+from dataclasses import dataclass, fields
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -16,20 +17,24 @@ class SimulationConfig:
     seed: int = 42
 
     def __post_init__(self):
-        for name in ('initial_equity', 'cost_bps', 'risk_lambda', 'risk_free_annual'):
+        for name in ("initial_equity", "cost_bps", "risk_lambda", "risk_free_annual"):
             value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-                raise ValueError(f'{name} must be finite numeric')
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"{name} must be finite numeric")
         if self.initial_equity <= 0:
-            raise ValueError('initial_equity must be positive')
+            raise ValueError("initial_equity must be positive")
         if not 0 <= self.cost_bps < 10_000:
-            raise ValueError('cost_bps must be in [0, 10000)')
+            raise ValueError("cost_bps must be in [0, 10000)")
         if self.risk_lambda < 0 or self.risk_free_annual <= -1:
-            raise ValueError('risk_lambda must be nonnegative; risk_free_annual must exceed -1')
-        for name, minimum in (('risk_window', 2), ('annualization', 1), ('seed', 0)):
+            raise ValueError("risk_lambda must be nonnegative; risk_free_annual must exceed -1")
+        for name, minimum in (("risk_window", 2), ("annualization", 1), ("seed", 0)):
             value = getattr(self, name)
             if type(value) is not int or value < minimum:
-                raise ValueError(f'{name} must be an integer >= {minimum}')
+                raise ValueError(f"{name} must be an integer >= {minimum}")
 
     @property
     def cost_rate(self):
@@ -37,9 +42,9 @@ class SimulationConfig:
 
     @classmethod
     def from_toml(cls, path: str | Path):
-        with Path(path).open('rb') as file:
+        with Path(path).open("rb") as file:
             values = tomllib.load(file)
         unknown = values.keys() - {field.name for field in fields(cls)}
         if unknown:
-            raise ValueError(f'Unknown configuration keys: {sorted(unknown)}')
+            raise ValueError(f"Unknown configuration keys: {sorted(unknown)}")
         return cls(**values)
