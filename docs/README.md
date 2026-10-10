@@ -15,6 +15,7 @@ QQQ is an ETF proxy for Nasdaq-100; the project operates on one price series and
 - To run it or view results: [02 — Quickstart](02-quickstart.md).
 - To see what the RL agent learned: [07 — Results](07-results.md).
 - To replay the exact experiment: [08 — Reproduction](08-reproduction.md).
+- To contribute or refactor: [Development workflow](development.md).
 
 For example, if you only want to view equity and drawdown, restore the saved artifacts and use `indexpilot-chart`. To check whether the results can actually be reproduced, also restore the exact snapshot and models, then use `indexpilot-evaluate verify`. These tasks have different prerequisites.
 
