@@ -3,9 +3,7 @@ from dataclasses import replace
 import pytest
 from final_helpers import source_fixture
 
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol
-from indexpilot_us100.evaluation.final.report import generate_report
-from indexpilot_us100.evaluation.final.workflow import run_evaluation
+from indexpilot_us100.evaluation.final import generate_report, prepare_protocol, run_evaluation
 
 
 def test_report_reads_artifacts_without_policy_calls(tmp_path, monkeypatch):
