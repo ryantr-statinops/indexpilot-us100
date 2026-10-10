@@ -175,6 +175,18 @@ def _snapshot_manifest(ticker: str, start: str, end: str, normalized: pl.DataFra
     }
 
 
+def _write_snapshot_files(normalized: pl.DataFrame, raw_path: Path, processed_path: Path) -> None:
+    # Persist the normalized source response including adjusted close and corporate actions.
+    # The processed file below adds derived returns and uses Polars' typed Parquet output.
+    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
+    normalized.write_parquet(processed_path)
+
+
+
+def _write_snapshot_manifest(manifest_path: Path, manifest: dict[str, Any]) -> None:
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
 def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[str, Path]:
     """Download a ticker, persist source and processed data, and write metadata.
 
@@ -193,14 +205,10 @@ def download_daily(ticker: str, start: str, end: str, output_dir: Path) -> dict[
     processed_path = output_dir / f"{prefix}_processed.parquet"
     manifest_path = output_dir / f"{prefix}_manifest.json"
 
-    # Persist the normalized source response including adjusted close and corporate actions.
-    # The processed file below adds derived returns and uses Polars' typed Parquet output.
-    normalized.drop("adj_open", "simple_return", "log_return", "open_to_open_return").write_csv(raw_path)
-    normalized.write_parquet(processed_path)
-
+    _write_snapshot_files(normalized, raw_path, processed_path)
     quality = _snapshot_quality(normalized)
     manifest = _snapshot_manifest(ticker, start, end, normalized, raw_path, processed_path, quality)
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    _write_snapshot_manifest(manifest_path, manifest)
     return {"raw": raw_path, "processed": processed_path, "manifest": manifest_path}
 
 
