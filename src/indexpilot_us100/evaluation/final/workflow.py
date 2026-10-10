@@ -11,6 +11,7 @@ from ..export import file_hash, write_json, write_json_atomic, git_revision
 from .aggregation import aggregate_seed_results
 from .artifacts import check_run, store_run, write_table
 from .comparison import paired_comparison
+from .completion import SUMMARY_FILES as SUMMARY_FILES, checked_scores as checked_scores, check_complete as check_complete
 from .config import EvaluationConfig
 from .history import ExperimentLedger, run_lock
 from .matrix import scenarios, evaluate_scenario
@@ -18,21 +19,6 @@ from .protocol import validate_protocol, environment, frozen_path
 from .windows import build_test_segment
 from .yearly import yearly_summary, expected_yearly_coverage
 from .types import FrozenProtocol, RunManifest, ScoreRow, YearCoverage
-
-SUMMARY_FILES = (
-    "primary_summary.csv",
-    "primary_summary.json",
-    "scenario_summary.csv",
-    "scenario_summary.json",
-    "seed_summary.csv",
-    "seed_summary.json",
-    "paired_comparison.csv",
-    "paired_comparison.json",
-    "yearly_summary.csv",
-    "yearly_summary.json",
-    "diagnostics.json",
-)
-
 
 def evaluation_config(protocol: FrozenProtocol) -> EvaluationConfig:
     values = dict(protocol["evaluation_config"])
@@ -43,30 +29,6 @@ def evaluation_config(protocol: FrozenProtocol) -> EvaluationConfig:
 
 def ledger_for(root) -> ExperimentLedger:
     return ExperimentLedger(Path(root).parent / "experiment-ledger.jsonl")
-
-
-def checked_scores(root, protocol: FrozenProtocol) -> list[ScoreRow]:
-    return [
-        check_run(frozen_path(root, "runs/" + row["scenario_id"]), protocol["protocol_id"])
-        for row in scenarios(protocol)
-    ]
-
-
-def check_complete(root, protocol: FrozenProtocol) -> RunManifest:
-    root = Path(root)
-    manifest = json.loads((root / "run_manifest.json").read_text())
-    if (
-        manifest.get("protocol_id") != protocol["protocol_id"]
-        or manifest.get("artifact_type") != "indexpilot-stage-4"
-    ):
-        raise ValueError("Completed run protocol mismatch")
-    actual = {name: file_hash(root / name) for name in SUMMARY_FILES}
-    if manifest.get("summary_hashes") != actual:
-        raise ValueError("Completed summary integrity failed")
-    scores = checked_scores(root, protocol)
-    if manifest.get("scenarios") != scores:
-        raise ValueError("Completed scenario inventory mismatch")
-    return manifest
 
 
 def summarize(
