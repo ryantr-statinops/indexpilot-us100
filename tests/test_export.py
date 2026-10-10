@@ -4,9 +4,8 @@ import polars as pl
 import pytest
 from test_simulator import market
 
-from indexpilot_us100.evaluation.export import export_results
-from indexpilot_us100.portfolio.baselines import baseline_policies
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.evaluation import export_results
+from indexpilot_us100.portfolio import baseline_policies, run_episode
 
 
 def test_export_roundtrip(tmp_path):
@@ -50,7 +49,7 @@ def test_repeat_exports_have_identical_numbers(tmp_path):
             tmp_path / "two" / filename
         ).read_bytes()
     manifest = json.loads((tmp_path / "one/run_manifest.json").read_text())
-    from indexpilot_us100.evaluation.export import file_hash
+    from indexpilot_us100.evaluation import file_hash
 
     assert manifest["input_sha256"] == file_hash(source)
     assert manifest["configuration"]["seed"] == 42

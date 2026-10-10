@@ -10,17 +10,19 @@ from final_helpers import source_fixture
 from test_reconciliation import synthetic_market
 from test_simulator import market
 
-from indexpilot_us100.evaluation.final.config import EvaluationConfig
+from indexpilot_us100.evaluation.final import EvaluationConfig, prepare_protocol, validate_protocol
 from indexpilot_us100.evaluation.final.diagnostics import drawdown_events, policy_diagnostics
 from indexpilot_us100.evaluation.final.preparation import prepare_models
-from indexpilot_us100.evaluation.final.protocol import prepare_protocol, validate_protocol
 from indexpilot_us100.evaluation.final.runner import baseline_scenarios, evaluate_baseline
 from indexpilot_us100.evaluation.final.source import validate_source
 from indexpilot_us100.evaluation.final.windows import build_test_segment
-from indexpilot_us100.portfolio.baselines import baseline_policies
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import MarketData, load_market_data
-from indexpilot_us100.portfolio.simulator import run_episode
+from indexpilot_us100.portfolio import (
+    MarketData,
+    SimulationConfig,
+    baseline_policies,
+    load_market_data,
+    run_episode,
+)
 
 
 def test_prepare_q_does_not_use_changed_validation_or_test(tmp_path):
