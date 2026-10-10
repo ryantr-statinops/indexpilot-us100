@@ -3,8 +3,7 @@
 from bisect import bisect_left, bisect_right
 from datetime import date
 
-from indexpilot_us100.portfolio.config import SimulationConfig
-from indexpilot_us100.portfolio.market import MarketData, decision_indices
+from indexpilot_us100.portfolio import MarketData, SimulationConfig, decision_indices
 
 from .config import EvaluationConfig
 
