@@ -1,12 +1,13 @@
 """Append-only hash-chained experiment history with process locking."""
 
-from typing import Any, Iterator
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import fcntl
 import json
 import os
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Iterator
+
 from ..export import git_revision
 from .protocol import digest
 

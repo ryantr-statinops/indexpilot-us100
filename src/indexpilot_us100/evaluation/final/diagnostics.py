@@ -1,10 +1,11 @@
 """Activity, reward components and event-level drawdown interpretation."""
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .runner import EvaluatedRun
 import numpy as np
+
 from indexpilot_us100.agents.state import ACTIONS
 from indexpilot_us100.metrics import drawdown_curve
 
