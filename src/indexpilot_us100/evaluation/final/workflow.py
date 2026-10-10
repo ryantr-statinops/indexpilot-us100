@@ -108,6 +108,20 @@ def _run_or_reuse_scenario(root: Path, protocol: FrozenProtocol, segment, scenar
     return score
 
 
+def _recover_completed_event(history: ExperimentLedger, protocol: FrozenProtocol, manifest: RunManifest) -> None:
+    if not any(
+        event["event"] == "completed" and event["protocol_id"] == protocol["protocol_id"]
+        for event in history.events()
+    ):
+        history.append(
+            "completed",
+            protocol["protocol_id"],
+            recovered=True,
+            scenarios=[row["scenario_id"] for row in manifest["scenarios"]],
+            summary_hashes=manifest["summary_hashes"],
+        )
+
+
 def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     root = Path(protocol_dir)
     protocol = validate_protocol(root, input_path)
@@ -115,17 +129,7 @@ def run_evaluation(protocol_dir, input_path=None, progress=None) -> RunManifest:
     with run_lock(root):
         if (root / "run_manifest.json").exists():
             manifest = check_complete(root, protocol)
-            if not any(
-                event["event"] == "completed" and event["protocol_id"] == protocol["protocol_id"]
-                for event in history.events()
-            ):
-                history.append(
-                    "completed",
-                    protocol["protocol_id"],
-                    recovered=True,
-                    scenarios=[row["scenario_id"] for row in manifest["scenarios"]],
-                    summary_hashes=manifest["summary_hashes"],
-                )
+            _recover_completed_event(history, protocol, manifest)
             return manifest
         completed = []
         history.append(
